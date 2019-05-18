@@ -1,4 +1,5 @@
 mod lexer;
+mod parser;
 
 fn main() {
     let (tokens, _) = lexer::scan("'hello world!'");
