@@ -105,6 +105,18 @@ pub struct LexedToken {
     pub pos: usize,
 }
 
+macro_rules! push_token {
+    ($T:expr, $tokens:ident, $line:ident, $pos:ident) => (
+        $tokens.push({
+            LexedToken {
+                token: $T,
+                line: $line,
+                pos: $pos,
+            }
+        });
+    )
+}
+
 pub fn scan(src: &str) -> (Vec<LexedToken>, Vec<LexerError>) {
     let mut line = 0;
     let mut tokens = Vec::<LexedToken>::new();
@@ -114,33 +126,15 @@ pub fn scan(src: &str) -> (Vec<LexedToken>, Vec<LexerError>) {
         match chars.next() {
             Some((pos, c)) => match c {
                 '(' => {
-                    tokens.push({
-                        LexedToken {
-                            token: Token::LeftParen,
-                            line: line,
-                            pos: pos,
-                        }
-                    });
+                    push_token!(Token::LeftParen, tokens, line, pos);
                 }
                 ')' => {
-                    tokens.push({
-                        LexedToken {
-                            token: Token::RightParen,
-                            line: line,
-                            pos: pos,
-                        }
-                    });
+                    push_token!(Token::RightParen, tokens, line, pos);
                 }
                 ':' => match chars.next() {
                     Some((pos, c)) => {
                         if c == '=' {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::ColonEqual,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::ColonEqual, tokens, line, pos);
                         } else {
                             errors.push({
                                 LexerError {
@@ -162,91 +156,37 @@ pub fn scan(src: &str) -> (Vec<LexedToken>, Vec<LexerError>) {
                     }
                 },
                 ',' => {
-                    tokens.push({
-                        LexedToken {
-                            token: Token::Comma,
-                            line: line,
-                            pos: pos,
-                        }
-                    });
+                    push_token!(Token::Comma, tokens, line, pos);
                 }
                 '-' => {
-                    tokens.push({
-                        LexedToken {
-                            token: Token::Minus,
-                            line: line,
-                            pos: pos,
-                        }
-                    });
+                    push_token!(Token::Minus, tokens, line, pos);
                 }
                 '+' => {
-                    tokens.push({
-                        LexedToken {
-                            token: Token::Plus,
-                            line: line,
-                            pos: pos,
-                        }
-                    });
+                    push_token!(Token::Plus, tokens, line, pos);
                 }
                 '/' => {
-                    tokens.push({
-                        LexedToken {
-                            token: Token::Slash,
-                            line: line,
-                            pos: pos,
-                        }
-                    });
+                    push_token!(Token::Slash, tokens, line, pos);
                 }
                 '*' => {
-                    tokens.push({
-                        LexedToken {
-                            token: Token::Star,
-                            line: line,
-                            pos: pos,
-                        }
-                    });
+                    push_token!(Token::Star, tokens, line, pos);
                 }
                 '!' => match chars.peek() {
                     Some((_, c)) => {
                         if *c == '=' {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::NotEqual,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::NotEqual, tokens, line, pos);
                             chars.next();
                         } else {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::Not,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::Not, tokens, line, pos);
                         }
                     }
                     None => {
-                        tokens.push({
-                            LexedToken {
-                                token: Token::Not,
-                                line: line,
-                                pos: pos,
-                            }
-                        });
+                        push_token!(Token::Not, tokens, line, pos);
                     }
                 },
                 '=' => match chars.peek() {
                     Some((_, c)) => {
                         if *c == '=' {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::EqualEqual,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::EqualEqual, tokens, line, pos);
                             chars.next();
                         } else {
                             errors.push({
@@ -263,63 +203,27 @@ pub fn scan(src: &str) -> (Vec<LexedToken>, Vec<LexerError>) {
                 '>' => match chars.peek() {
                     Some((_, c)) => {
                         if *c == '=' {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::GreaterEqual,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::GreaterEqual, tokens, line, pos);
                             chars.next();
                         } else {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::Greater,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::Greater, tokens, line, pos);
                         }
                     }
                     None => {
-                        tokens.push({
-                            LexedToken {
-                                token: Token::Greater,
-                                line: line,
-                                pos: pos,
-                            }
-                        });
+                        push_token!(Token::Greater, tokens, line, pos);
                     }
                 },
                 '<' => match chars.peek() {
                     Some((_, c)) => {
                         if *c == '=' {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::LessEqual,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::LessEqual, tokens, line, pos);
                             chars.next();
                         } else {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::Less,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::Less, tokens, line, pos);
                         }
                     }
                     None => {
-                        tokens.push({
-                            LexedToken {
-                                token: Token::Less,
-                                line: line,
-                                pos: pos,
-                            }
-                        });
+                        push_token!(Token::Less, tokens, line, pos);
                     }
                 },
                 '\'' => {
@@ -328,13 +232,7 @@ pub fn scan(src: &str) -> (Vec<LexedToken>, Vec<LexerError>) {
                         match chars.next() {
                             Some((_, c)) => match c {
                                 '\'' => {
-                                    tokens.push({
-                                        LexedToken {
-                                            token: Token::Str(v.into_iter().collect()),
-                                            line: line,
-                                            pos: pos,
-                                        }
-                                    });
+                                    push_token!(Token::Str(v.into_iter().collect()), tokens, line, pos);
                                     break;
                                 }
                                 '\n' => {
@@ -389,167 +287,59 @@ pub fn scan(src: &str) -> (Vec<LexedToken>, Vec<LexerError>) {
                     let s: String = v.into_iter().collect();
                     match &s[..] {
                         "and" => {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::And,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::And, tokens, line, pos);
                         }
                         "break" => {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::Break,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::Break, tokens, line, pos);
                         }
                         "continue" => {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::Continue,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::Continue, tokens, line, pos);
                         }
                         "do" => {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::Do,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::Do, tokens, line, pos);
                         }
                         "else" => {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::Else,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::Else, tokens, line, pos);
                         }
                         "elsif" => {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::Elsif,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::Elsif, tokens, line, pos);
                         }
                         "end" => {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::End,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::End, tokens, line, pos);
                         }
                         "false" => {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::False,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::False, tokens, line, pos);
                         }
                         "fn" => {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::Function,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::Function, tokens, line, pos);
                         }
                         "if" => {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::If,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::If, tokens, line, pos);
                         }
                         "let" => {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::Let,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::Let, tokens, line, pos);
                         }
                         "or" => {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::Or,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::Or, tokens, line, pos);
                         }
                         "return" => {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::Return,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::Return, tokens, line, pos);
                         }
                         "then" => {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::Then,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::Then, tokens, line, pos);
                         }
                         "true" => {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::True,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::True, tokens, line, pos);
                         }
                         "while" => {
-                            tokens.push({
-                                LexedToken {
-                                    token: Token::While,
-                                    line: line,
-                                    pos: pos,
-                                }
-                            });
+                            push_token!(Token::While, tokens, line, pos);
                         }
                         _ => match s.parse::<f64>() {
                             Ok(n) => {
-                                tokens.push({
-                                    LexedToken {
-                                        token: Token::Number(n),
-                                        line: line,
-                                        pos: pos,
-                                    }
-                                });
+                                push_token!(Token::Number(n), tokens, line, pos);
                             }
                             _ => {
-                                tokens.push({
-                                    LexedToken {
-                                        token: Token::Identifier(s.to_string()),
-                                        line: line,
-                                        pos: pos,
-                                    }
-                                });
+                                push_token!(Token::Identifier(s.to_string()), tokens, line, pos);
                             }
                         },
                     }
