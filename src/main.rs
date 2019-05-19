@@ -12,15 +12,17 @@ fn main() -> io::Result<()> {
     stdout.flush()?;
     for line in stdin.lock().lines() {
         match line {
-            Ok(s) => {
-                let (mut tokens, _) = lexer::scan(&s);
-                match parser::parse(&mut tokens) {
+            Ok(s) => match lexer::scan(&s) {
+                Ok(mut tokens) => match parser::parse(&mut tokens) {
                     Ok(ast) => println!("{}", interpreter::eval(&ast)),
                     Err(err) => {
                         println!("{}", err);
                     }
+                },
+                Err(err) => {
+                    println!("{}", err);
                 }
-            }
+            },
             _ => break,
         }
         print!("> ");

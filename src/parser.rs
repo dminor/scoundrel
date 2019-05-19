@@ -270,171 +270,308 @@ mod tests {
 
     #[test]
     fn parsing() {
-        let (mut tokens, errors) = lexer::scan("2");
-        assert_eq!(errors.len(), 0);
-        assert_eq!(tokens.len(), 1);
-        match parser::parse(&mut tokens) {
-            Ok(ast) => match ast {
-                parser::Ast::Value(t) => {
-                    assert_eq!(t.token, lexer::Token::Number(2.0));
-                }
-                _ => {
-                    assert!(false);
-                }
-            },
-            _ => assert!(false),
-        }
-
-        let (mut tokens, errors) = lexer::scan("(2)");
-        assert_eq!(errors.len(), 0);
-        assert_eq!(tokens.len(), 3);
-        match parser::parse(&mut tokens) {
-            Ok(ast) => match ast {
-                parser::Ast::Value(t) => {
-                    assert_eq!(t.token, lexer::Token::Number(2.0));
-                }
-                _ => assert!(false),
-            },
-            _ => assert!(false),
-        }
-
-        let (mut tokens, errors) = lexer::scan("false");
-        assert_eq!(errors.len(), 0);
-        assert_eq!(tokens.len(), 1);
-        match parser::parse(&mut tokens) {
-            Ok(ast) => match ast {
-                parser::Ast::Value(t) => {
-                    assert_eq!(t.token, lexer::Token::False);
-                }
-                _ => assert!(false),
-            },
-            _ => assert!(false),
-        }
-
-        let (mut tokens, errors) = lexer::scan("true");
-        assert_eq!(errors.len(), 0);
-        assert_eq!(tokens.len(), 1);
-        match parser::parse(&mut tokens) {
-            Ok(ast) => match ast {
-                parser::Ast::Value(t) => {
-                    assert_eq!(t.token, lexer::Token::True);
-                }
-                _ => assert!(false),
-            },
-            _ => assert!(false),
-        }
-
-        let (mut tokens, errors) = lexer::scan("x");
-        assert_eq!(errors.len(), 0);
-        assert_eq!(tokens.len(), 1);
-        match parser::parse(&mut tokens) {
-            Ok(ast) => match ast {
-                parser::Ast::Value(t) => {
-                    assert_eq!(t.token, lexer::Token::Identifier("x".to_string()));
-                }
-                _ => assert!(false),
-            },
-            _ => assert!(false),
-        }
-
-        let (mut tokens, errors) = lexer::scan("-2");
-        assert_eq!(errors.len(), 0);
-        assert_eq!(tokens.len(), 2);
-        match parser::parse(&mut tokens) {
-            Ok(ast) => match ast {
-                parser::Ast::UnaryOp(op, t) => {
-                    assert_eq!(op.token, lexer::Token::Minus);
-                    match *t {
+        match lexer::scan("2") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 1);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match ast {
                         parser::Ast::Value(t) => {
                             assert_eq!(t.token, lexer::Token::Number(2.0));
                         }
                         _ => assert!(false),
-                    }
+                    },
+                    _ => assert!(false),
                 }
-                _ => assert!(false),
-            },
+            }
             _ => assert!(false),
         }
 
-        let (mut tokens, errors) = lexer::scan("!true");
-        assert_eq!(errors.len(), 0);
-        assert_eq!(tokens.len(), 2);
-        match parser::parse(&mut tokens) {
-            Ok(ast) => match ast {
-                parser::Ast::UnaryOp(op, t) => {
-                    assert_eq!(op.token, lexer::Token::Not);
-                    match *t {
+        match lexer::scan("(2)") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 3);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match ast {
+                        parser::Ast::Value(t) => {
+                            assert_eq!(t.token, lexer::Token::Number(2.0));
+                        }
+                        _ => assert!(false),
+                    },
+                    _ => assert!(false),
+                }
+            }
+            _ => assert!(false),
+        }
+
+        match lexer::scan("false") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 1);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match ast {
+                        parser::Ast::Value(t) => {
+                            assert_eq!(t.token, lexer::Token::False);
+                        }
+                        _ => assert!(false),
+                    },
+                    _ => assert!(false),
+                }
+            }
+            _ => assert!(false),
+        }
+
+        match lexer::scan("true") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 1);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match ast {
                         parser::Ast::Value(t) => {
                             assert_eq!(t.token, lexer::Token::True);
                         }
                         _ => assert!(false),
-                    }
+                    },
+                    _ => assert!(false),
                 }
-                _ => assert!(false),
-            },
+            }
             _ => assert!(false),
         }
 
-        let (mut tokens, errors) = lexer::scan("2*2/5");
-        assert_eq!(errors.len(), 0);
-        assert_eq!(tokens.len(), 5);
-        match parser::parse(&mut tokens) {
-            Ok(ast) => match ast {
-                parser::Ast::BinaryOp(op, lhs, rhs) => {
-                    assert_eq!(op.token, lexer::Token::Slash);
-                    match *lhs {
-                        parser::Ast::BinaryOp(op, lhs, rhs) => {
-                            assert_eq!(op.token, lexer::Token::Star);
-                            match *lhs {
+        match lexer::scan("x") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 1);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match ast {
+                        parser::Ast::Value(t) => {
+                            assert_eq!(t.token, lexer::Token::Identifier("x".to_string()));
+                        }
+                        _ => assert!(false),
+                    },
+                    _ => assert!(false),
+                }
+            }
+            _ => assert!(false),
+        }
+
+        match lexer::scan("-2") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 2);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match ast {
+                        parser::Ast::UnaryOp(op, t) => {
+                            assert_eq!(op.token, lexer::Token::Minus);
+                            match *t {
                                 parser::Ast::Value(t) => {
                                     assert_eq!(t.token, lexer::Token::Number(2.0));
+                                }
+                                _ => assert!(false),
+                            }
+                        }
+                        _ => assert!(false),
+                    },
+                    _ => assert!(false),
+                }
+            }
+            _ => assert!(false),
+        }
+
+        match lexer::scan("!true") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 2);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match ast {
+                        parser::Ast::UnaryOp(op, t) => {
+                            assert_eq!(op.token, lexer::Token::Not);
+                            match *t {
+                                parser::Ast::Value(t) => {
+                                    assert_eq!(t.token, lexer::Token::True);
+                                }
+                                _ => assert!(false),
+                            }
+                        }
+                        _ => assert!(false),
+                    },
+                    _ => assert!(false),
+                }
+            }
+            _ => assert!(false),
+        }
+
+        match lexer::scan("2*2/5") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 5);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match ast {
+                        parser::Ast::BinaryOp(op, lhs, rhs) => {
+                            assert_eq!(op.token, lexer::Token::Slash);
+                            match *lhs {
+                                parser::Ast::BinaryOp(op, lhs, rhs) => {
+                                    assert_eq!(op.token, lexer::Token::Star);
+                                    match *lhs {
+                                        parser::Ast::Value(t) => {
+                                            assert_eq!(t.token, lexer::Token::Number(2.0));
+                                        }
+                                        _ => assert!(false),
+                                    }
+                                    match *rhs {
+                                        parser::Ast::Value(t) => {
+                                            assert_eq!(t.token, lexer::Token::Number(2.0));
+                                        }
+                                        _ => assert!(false),
+                                    }
                                 }
                                 _ => assert!(false),
                             }
                             match *rhs {
-                                parser::Ast::Value(t) => {
-                                    assert_eq!(t.token, lexer::Token::Number(2.0));
-                                }
-                                _ => assert!(false),
-                            }
-                        }
-                        _ => assert!(false),
-                    }
-                    match *rhs {
-                        parser::Ast::Value(t) => {
-                            assert_eq!(t.token, lexer::Token::Number(5.0));
-                        }
-                        _ => assert!(false),
-                    }
-                }
-                _ => assert!(false),
-            },
-            _ => assert!(false),
-        }
-
-        let (mut tokens, errors) = lexer::scan("2+5/2");
-        assert_eq!(errors.len(), 0);
-        assert_eq!(tokens.len(), 5);
-        match parser::parse(&mut tokens) {
-            Ok(ast) => match ast {
-                parser::Ast::BinaryOp(op, lhs, rhs) => {
-                    assert_eq!(op.token, lexer::Token::Plus);
-                    match *lhs {
-                        parser::Ast::Value(t) => {
-                            assert_eq!(t.token, lexer::Token::Number(2.0));
-                        }
-                        _ => assert!(false),
-                    }
-                    match *rhs {
-                        parser::Ast::BinaryOp(op, lhs, rhs) => {
-                            assert_eq!(op.token, lexer::Token::Slash);
-                            match *lhs {
                                 parser::Ast::Value(t) => {
                                     assert_eq!(t.token, lexer::Token::Number(5.0));
                                 }
                                 _ => assert!(false),
                             }
+                        }
+                        _ => assert!(false),
+                    },
+                    _ => assert!(false),
+                }
+            }
+            _ => assert!(false),
+        }
+
+        match lexer::scan("2+5/2") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 5);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match ast {
+                        parser::Ast::BinaryOp(op, lhs, rhs) => {
+                            assert_eq!(op.token, lexer::Token::Plus);
+                            match *lhs {
+                                parser::Ast::Value(t) => {
+                                    assert_eq!(t.token, lexer::Token::Number(2.0));
+                                }
+                                _ => assert!(false),
+                            }
                             match *rhs {
+                                parser::Ast::BinaryOp(op, lhs, rhs) => {
+                                    assert_eq!(op.token, lexer::Token::Slash);
+                                    match *lhs {
+                                        parser::Ast::Value(t) => {
+                                            assert_eq!(t.token, lexer::Token::Number(5.0));
+                                        }
+                                        _ => assert!(false),
+                                    }
+                                    match *rhs {
+                                        parser::Ast::Value(t) => {
+                                            assert_eq!(t.token, lexer::Token::Number(2.0));
+                                        }
+                                        _ => assert!(false),
+                                    }
+                                }
+                                _ => assert!(false),
+                            }
+                        }
+                        _ => assert!(false),
+                    },
+                    _ => assert!(false),
+                }
+            }
+            _ => assert!(false),
+        }
+
+        match lexer::scan("2<=3") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 3);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match ast {
+                        parser::Ast::BinaryOp(op, lhs, rhs) => {
+                            assert_eq!(op.token, lexer::Token::LessEqual);
+                            match *lhs {
+                                parser::Ast::Value(t) => {
+                                    assert_eq!(t.token, lexer::Token::Number(2.0));
+                                }
+                                _ => assert!(false),
+                            }
+                            match *rhs {
+                                parser::Ast::Value(t) => {
+                                    assert_eq!(t.token, lexer::Token::Number(3.0));
+                                }
+                                _ => assert!(false),
+                            }
+                        }
+                        _ => assert!(false),
+                    },
+                    _ => assert!(false),
+                }
+            }
+            _ => assert!(false),
+        }
+
+        match lexer::scan("x == y != false") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 5);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match ast {
+                        parser::Ast::BinaryOp(op, lhs, rhs) => {
+                            assert_eq!(op.token, lexer::Token::NotEqual);
+                            match *lhs {
+                                parser::Ast::BinaryOp(op, lhs, rhs) => {
+                                    assert_eq!(op.token, lexer::Token::EqualEqual);
+                                    match *lhs {
+                                        parser::Ast::Value(t) => {
+                                            assert_eq!(
+                                                t.token,
+                                                lexer::Token::Identifier("x".to_string())
+                                            );
+                                        }
+                                        _ => assert!(false),
+                                    }
+                                    match *rhs {
+                                        parser::Ast::Value(t) => {
+                                            assert_eq!(
+                                                t.token,
+                                                lexer::Token::Identifier("y".to_string())
+                                            );
+                                        }
+                                        _ => assert!(false),
+                                    }
+                                }
+                                _ => assert!(false),
+                            }
+                            match *rhs {
+                                parser::Ast::Value(t) => {
+                                    assert_eq!(t.token, lexer::Token::False);
+                                }
+                                _ => assert!(false),
+                            }
+                        }
+                        _ => assert!(false),
+                    },
+                    _ => assert!(false),
+                }
+            }
+            _ => assert!(false),
+        }
+
+        match lexer::scan("[]") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 2);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match ast {
+                        parser::Ast::List(l) => {
+                            assert_eq!(l.len(), 0);
+                        }
+                        _ => assert!(false),
+                    },
+                    _ => assert!(false),
+                }
+            }
+            _ => assert!(false),
+        }
+
+        match lexer::scan("[2]") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 3);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match ast {
+                        parser::Ast::List(l) => {
+                            assert_eq!(l.len(), 1);
+                            match &l[0] {
                                 parser::Ast::Value(t) => {
                                     assert_eq!(t.token, lexer::Token::Number(2.0));
                                 }
@@ -442,168 +579,89 @@ mod tests {
                             }
                         }
                         _ => assert!(false),
-                    }
+                    },
+                    _ => assert!(false),
                 }
-                _ => assert!(false),
-            },
+            }
             _ => assert!(false),
         }
 
-        let (mut tokens, errors) = lexer::scan("2<=3");
-        assert_eq!(errors.len(), 0);
-        assert_eq!(tokens.len(), 3);
-        match parser::parse(&mut tokens) {
-            Ok(ast) => match ast {
-                parser::Ast::BinaryOp(op, lhs, rhs) => {
-                    assert_eq!(op.token, lexer::Token::LessEqual);
-                    match *lhs {
-                        parser::Ast::Value(t) => {
-                            assert_eq!(t.token, lexer::Token::Number(2.0));
-                        }
-                        _ => assert!(false),
-                    }
-                    match *rhs {
-                        parser::Ast::Value(t) => {
-                            assert_eq!(t.token, lexer::Token::Number(3.0));
-                        }
-                        _ => assert!(false),
-                    }
-                }
-                _ => assert!(false),
-            },
-            _ => assert!(false),
-        }
-
-        let (mut tokens, errors) = lexer::scan("x == y != false");
-        assert_eq!(errors.len(), 0);
-        assert_eq!(tokens.len(), 5);
-        match parser::parse(&mut tokens) {
-            Ok(ast) => match ast {
-                parser::Ast::BinaryOp(op, lhs, rhs) => {
-                    assert_eq!(op.token, lexer::Token::NotEqual);
-                    match *lhs {
-                        parser::Ast::BinaryOp(op, lhs, rhs) => {
-                            assert_eq!(op.token, lexer::Token::EqualEqual);
-                            match *lhs {
+        match lexer::scan("[1 2 3]") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 5);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match ast {
+                        parser::Ast::List(l) => {
+                            assert_eq!(l.len(), 3);
+                            match &l[0] {
                                 parser::Ast::Value(t) => {
-                                    assert_eq!(t.token, lexer::Token::Identifier("x".to_string()));
+                                    assert_eq!(t.token, lexer::Token::Number(1.0));
                                 }
                                 _ => assert!(false),
                             }
-                            match *rhs {
+                            match &l[1] {
                                 parser::Ast::Value(t) => {
-                                    assert_eq!(t.token, lexer::Token::Identifier("y".to_string()));
+                                    assert_eq!(t.token, lexer::Token::Number(2.0));
+                                }
+                                _ => assert!(false),
+                            }
+                            match &l[2] {
+                                parser::Ast::Value(t) => {
+                                    assert_eq!(t.token, lexer::Token::Number(3.0));
                                 }
                                 _ => assert!(false),
                             }
                         }
                         _ => assert!(false),
-                    }
-                    match *rhs {
-                        parser::Ast::Value(t) => {
-                            assert_eq!(t.token, lexer::Token::False);
-                        }
-                        _ => assert!(false),
-                    }
+                    },
+                    _ => assert!(false),
                 }
-                _ => assert!(false),
-            },
+            }
             _ => assert!(false),
         }
 
-        let (mut tokens, errors) = lexer::scan("[]");
-        assert_eq!(errors.len(), 0);
-        assert_eq!(tokens.len(), 2);
-        match parser::parse(&mut tokens) {
-            Ok(ast) => match ast {
-                parser::Ast::List(l) => {
-                    assert_eq!(l.len(), 0);
+        match lexer::scan("") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 0);
+                match parser::parse(&mut tokens) {
+                    Ok(_ast) => assert!(false),
+                    _ => {}
                 }
-                _ => assert!(false),
-            },
+            }
             _ => assert!(false),
         }
 
-        let (mut tokens, errors) = lexer::scan("[2]");
-        assert_eq!(errors.len(), 0);
-        assert_eq!(tokens.len(), 3);
-        match parser::parse(&mut tokens) {
-            Ok(ast) => match ast {
-                parser::Ast::List(l) => {
-                    assert_eq!(l.len(), 1);
-                    match &l[0] {
-                        parser::Ast::Value(t) => {
-                            assert_eq!(t.token, lexer::Token::Number(2.0));
-                        }
-                        _ => assert!(false),
-                    }
+        match lexer::scan("[") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 1);
+                match parser::parse(&mut tokens) {
+                    Ok(_ast) => assert!(false),
+                    _ => {}
                 }
-                _ => assert!(false),
-            },
+            }
             _ => assert!(false),
         }
 
-        let (mut tokens, errors) = lexer::scan("[1 2 3]");
-        assert_eq!(errors.len(), 0);
-        assert_eq!(tokens.len(), 5);
-        match parser::parse(&mut tokens) {
-            Ok(ast) => match ast {
-                parser::Ast::List(l) => {
-                    assert_eq!(l.len(), 3);
-                    match &l[0] {
-                        parser::Ast::Value(t) => {
-                            assert_eq!(t.token, lexer::Token::Number(1.0));
-                        }
-                        _ => assert!(false),
-                    }
-                    match &l[1] {
-                        parser::Ast::Value(t) => {
-                            assert_eq!(t.token, lexer::Token::Number(2.0));
-                        }
-                        _ => assert!(false),
-                    }
-                    match &l[2] {
-                        parser::Ast::Value(t) => {
-                            assert_eq!(t.token, lexer::Token::Number(3.0));
-                        }
-                        _ => assert!(false),
-                    }
+        match lexer::scan("(") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 1);
+                match parser::parse(&mut tokens) {
+                    Ok(_ast) => assert!(false),
+                    _ => {}
                 }
-                _ => assert!(false),
-            },
+            }
             _ => assert!(false),
         }
 
-        let (mut tokens, errors) = lexer::scan("");
-        assert_eq!(errors.len(), 0);
-        assert_eq!(tokens.len(), 0);
-        match parser::parse(&mut tokens) {
-            Ok(_ast) => assert!(false),
-            _ => {}
-        }
-
-        let (mut tokens, errors) = lexer::scan("[");
-        assert_eq!(errors.len(), 0);
-        assert_eq!(tokens.len(), 1);
-        match parser::parse(&mut tokens) {
-            Ok(_ast) => assert!(false),
-            _ => {}
-        }
-
-        let (mut tokens, errors) = lexer::scan("(");
-        assert_eq!(errors.len(), 0);
-        assert_eq!(tokens.len(), 1);
-        match parser::parse(&mut tokens) {
-            Ok(_ast) => assert!(false),
-            _ => {}
-        }
-
-        let (mut tokens, errors) = lexer::scan("(2]");
-        assert_eq!(errors.len(), 0);
-        assert_eq!(tokens.len(), 3);
-        match parser::parse(&mut tokens) {
-            Ok(_ast) => assert!(false),
-            _ => {}
+        match lexer::scan("(2]") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 3);
+                match parser::parse(&mut tokens) {
+                    Ok(_ast) => assert!(false),
+                    _ => {}
+                }
+            }
+            _ => assert!(false),
         }
     }
 }
