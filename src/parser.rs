@@ -120,6 +120,10 @@ fn multiplication(tokens: &mut Vec<lexer::LexedToken>) -> Ast {
 }
 
 fn unary(tokens: &mut Vec<lexer::LexedToken>) -> Ast {
+    if tokens.len() == 0 {
+        // TODO: signal error
+        return Ast::None;
+    }
     let peek = &tokens[0];
     match peek.token {
         lexer::Token::Minus => {
@@ -135,6 +139,10 @@ fn unary(tokens: &mut Vec<lexer::LexedToken>) -> Ast {
 }
 
 fn value(tokens: &mut Vec<lexer::LexedToken>) -> Ast {
+    if tokens.len() == 0 {
+        // TODO: signal error
+        return Ast::None;
+    }
     let token = tokens.remove(0);
     match token.token {
         lexer::Token::False => Ast::Value(token),
