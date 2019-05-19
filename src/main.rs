@@ -14,8 +14,12 @@ fn main() -> io::Result<()> {
         match line {
             Ok(s) => {
                 let (mut tokens, _) = lexer::scan(&s);
-                let ast = parser::parse(&mut tokens);
-                println!("{}", interpreter::eval(&ast));
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => println!("{}", interpreter::eval(&ast)),
+                    Err(err) => {
+                        println!("{}", err);
+                    }
+                }
             }
             _ => break,
         }

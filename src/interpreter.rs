@@ -161,7 +161,6 @@ pub fn eval(ast: &parser::Ast) -> Value {
         }
         parser::Ast::UnaryOp(op, v) => unaryop(op, v),
         parser::Ast::Value(t) => value(t),
-        _ => Value::Nil,
     }
 }
 
@@ -176,128 +175,122 @@ mod tests {
         let (mut tokens, errors) = lexer::scan("2");
         assert_eq!(errors.len(), 0);
         assert_eq!(tokens.len(), 1);
-        let ast = parser::parse(&mut tokens);
-        match interpreter::eval(&ast) {
-            interpreter::Value::Number(t) => {
-                assert_eq!(t, 2.0);
-            }
-            _ => {
-                assert!(false);
-            }
+        match parser::parse(&mut tokens) {
+            Ok(ast) => match interpreter::eval(&ast) {
+                interpreter::Value::Number(t) => {
+                    assert_eq!(t, 2.0);
+                }
+                _ => assert!(false),
+            },
+            _ => assert!(false),
         }
 
         let (mut tokens, errors) = lexer::scan("-2");
         assert_eq!(errors.len(), 0);
         assert_eq!(tokens.len(), 2);
-        let ast = parser::parse(&mut tokens);
-        match interpreter::eval(&ast) {
-            interpreter::Value::Number(t) => {
-                assert_eq!(t, -2.0);
-            }
-            _ => {
-                assert!(false);
-            }
+        match parser::parse(&mut tokens) {
+            Ok(ast) => match interpreter::eval(&ast) {
+                interpreter::Value::Number(t) => {
+                    assert_eq!(t, -2.0);
+                }
+                _ => assert!(false),
+            },
+            _ => assert!(false),
         }
 
         let (mut tokens, errors) = lexer::scan("!true");
         assert_eq!(errors.len(), 0);
         assert_eq!(tokens.len(), 2);
-        let ast = parser::parse(&mut tokens);
-        match interpreter::eval(&ast) {
-            interpreter::Value::Boolean(t) => {
-                assert!(!t);
-            }
-            _ => {
-                assert!(false);
-            }
+        match parser::parse(&mut tokens) {
+            Ok(ast) => match interpreter::eval(&ast) {
+                interpreter::Value::Boolean(t) => {
+                    assert!(!t);
+                }
+                _ => assert!(false),
+            },
+            _ => assert!(false),
         }
 
         let (mut tokens, errors) = lexer::scan("2+2");
         assert_eq!(errors.len(), 0);
         assert_eq!(tokens.len(), 3);
-        let ast = parser::parse(&mut tokens);
-        match interpreter::eval(&ast) {
-            interpreter::Value::Number(t) => {
-                assert_eq!(t, 4.0);
-            }
-            _ => {
-                assert!(false);
-            }
+        match parser::parse(&mut tokens) {
+            Ok(ast) => match interpreter::eval(&ast) {
+                interpreter::Value::Number(t) => {
+                    assert_eq!(t, 4.0);
+                }
+                _ => assert!(false),
+            },
+            _ => assert!(false),
         }
 
         let (mut tokens, errors) = lexer::scan("2.2+2*5");
         assert_eq!(errors.len(), 0);
         assert_eq!(tokens.len(), 5);
-        let ast = parser::parse(&mut tokens);
-        match interpreter::eval(&ast) {
-            interpreter::Value::Number(t) => {
-                assert_eq!(t, 12.2);
-            }
-            _ => {
-                assert!(false);
-            }
+        match parser::parse(&mut tokens) {
+            Ok(ast) => match interpreter::eval(&ast) {
+                interpreter::Value::Number(t) => {
+                    assert_eq!(t, 12.2);
+                }
+                _ => assert!(false),
+            },
+            _ => assert!(false),
         }
 
         let (mut tokens, errors) = lexer::scan("2+2<=5");
         assert_eq!(errors.len(), 0);
         assert_eq!(tokens.len(), 5);
-        let ast = parser::parse(&mut tokens);
-        match interpreter::eval(&ast) {
-            interpreter::Value::Boolean(b) => {
-                assert!(b);
-            }
-            _ => {
-                assert!(false);
-            }
+        match parser::parse(&mut tokens) {
+            Ok(ast) => match interpreter::eval(&ast) {
+                interpreter::Value::Boolean(b) => {
+                    assert!(b);
+                }
+                _ => assert!(false),
+            },
+            _ => assert!(false),
         }
 
         let (mut tokens, errors) = lexer::scan("2+2>5");
         assert_eq!(errors.len(), 0);
         assert_eq!(tokens.len(), 5);
-        let ast = parser::parse(&mut tokens);
-        match interpreter::eval(&ast) {
-            interpreter::Value::Boolean(b) => {
-                assert!(!b);
-            }
-            _ => {
-                assert!(false);
-            }
+        match parser::parse(&mut tokens) {
+            Ok(ast) => match interpreter::eval(&ast) {
+                interpreter::Value::Boolean(b) => {
+                    assert!(!b);
+                }
+                _ => assert!(false),
+            },
+            _ => assert!(false),
         }
 
         let (mut tokens, errors) = lexer::scan("[2 2>5 3*4]");
         assert_eq!(errors.len(), 0);
         assert_eq!(tokens.len(), 9);
-        let ast = parser::parse(&mut tokens);
-        match interpreter::eval(&ast) {
-            interpreter::Value::List(list) => {
-                match list[0] {
-                    interpreter::Value::Number(t) => {
-                        assert_eq!(t, 2.0);
+        match parser::parse(&mut tokens) {
+            Ok(ast) => match interpreter::eval(&ast) {
+                interpreter::Value::List(list) => {
+                    match list[0] {
+                        interpreter::Value::Number(t) => {
+                            assert_eq!(t, 2.0);
+                        }
+                        _ => assert!(false),
                     }
-                    _ => {
-                        assert!(false);
+                    match list[1] {
+                        interpreter::Value::Boolean(b) => {
+                            assert!(!b);
+                        }
+                        _ => assert!(false),
                     }
-                }
-                match list[1] {
-                    interpreter::Value::Boolean(b) => {
-                        assert!(!b);
-                    }
-                    _ => {
-                        assert!(false);
-                    }
-                }
-                match list[2] {
-                    interpreter::Value::Number(t) => {
-                        assert_eq!(t, 12.0);
-                    }
-                    _ => {
-                        assert!(false);
+                    match list[2] {
+                        interpreter::Value::Number(t) => {
+                            assert_eq!(t, 12.0);
+                        }
+                        _ => assert!(false),
                     }
                 }
-            }
-            _ => {
-                assert!(false);
-            }
+                _ => assert!(false),
+            },
+            _ => assert!(false),
         }
     }
 }
