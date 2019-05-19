@@ -106,7 +106,7 @@ pub struct LexedToken {
 }
 
 macro_rules! push_token {
-    ($T:expr, $tokens:ident, $line:ident, $pos:ident) => (
+    ($T:expr, $tokens:ident, $line:ident, $pos:ident) => {
         $tokens.push({
             LexedToken {
                 token: $T,
@@ -114,7 +114,7 @@ macro_rules! push_token {
                 pos: $pos,
             }
         });
-    )
+    };
 }
 
 pub fn scan(src: &str) -> (Vec<LexedToken>, Vec<LexerError>) {
@@ -232,7 +232,12 @@ pub fn scan(src: &str) -> (Vec<LexedToken>, Vec<LexerError>) {
                         match chars.next() {
                             Some((_, c)) => match c {
                                 '\'' => {
-                                    push_token!(Token::Str(v.into_iter().collect()), tokens, line, pos);
+                                    push_token!(
+                                        Token::Str(v.into_iter().collect()),
+                                        tokens,
+                                        line,
+                                        pos
+                                    );
                                     break;
                                 }
                                 '\n' => {
