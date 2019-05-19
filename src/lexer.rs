@@ -374,7 +374,7 @@ pub fn scan(src: &str) -> (Vec<LexedToken>, Vec<LexerError>) {
                     loop {
                         match chars.peek() {
                             Some((_, c)) => {
-                                if c.is_alphanumeric() {
+                                if c.is_alphanumeric() || *c == '.' {
                                     v.push(*c);
                                     chars.next();
                                 } else {
@@ -692,6 +692,11 @@ mod tests {
         assert_eq!(errors.len(), 0);
         assert_eq!(tokens.len(), 1);
         assert_eq!(tokens[0].token, lexer::Token::Number(42.0));
+
+        let (tokens, errors) = lexer::scan("4.2");
+        assert_eq!(errors.len(), 0);
+        assert_eq!(tokens.len(), 1);
+        assert_eq!(tokens[0].token, lexer::Token::Number(4.2));
 
         let (tokens, errors) = lexer::scan("4+2");
         assert_eq!(errors.len(), 0);

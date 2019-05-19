@@ -9,7 +9,7 @@ comparison     -> addition ( ( ">" | ">=" | "<" | "<=" ) addition )*
 addition       -> multiplication ( ( "+" | "-" ) multiplication )*
 multiplication -> unary ( ( "/" | "*" ) unary )*
 unary          -> ( "!" | "-" ) unary | value
-value          -> NUMBER | STRING | "false" | "true" |
+value          -> NUMBER | STR | "false" | "true" |
                   "(" expression ")"
 */
 
@@ -145,6 +145,7 @@ fn value(tokens: &mut Vec<lexer::LexedToken>) -> Ast {
         }),
         lexer::Token::True => Ast::Value(token),
         lexer::Token::Number(_) => Ast::Value(token),
+        lexer::Token::Str(_) => Ast::Value(token),
         lexer::Token::LeftParen => {
             let result = expression(tokens);
             let next = tokens.remove(0);
