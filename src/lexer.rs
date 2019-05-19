@@ -3,6 +3,8 @@ use std::fmt;
 
 #[derive(Debug, PartialEq)]
 pub enum Token {
+    LeftBracket,
+    RightBracket,
     LeftParen,
     RightParen,
     ColonEqual,
@@ -46,6 +48,8 @@ pub enum Token {
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Token::LeftBracket => write!(f, "["),
+            Token::RightBracket => write!(f, "]"),
             Token::LeftParen => write!(f, "("),
             Token::RightParen => write!(f, ")"),
             Token::ColonEqual => write!(f, ":="),
@@ -125,6 +129,12 @@ pub fn scan(src: &str) -> (Vec<LexedToken>, Vec<LexerError>) {
     loop {
         match chars.next() {
             Some((pos, c)) => match c {
+                '[' => {
+                    push_token!(Token::LeftBracket, tokens, line, pos);
+                }
+                ']' => {
+                    push_token!(Token::RightBracket, tokens, line, pos);
+                }
                 '(' => {
                     push_token!(Token::LeftParen, tokens, line, pos);
                 }
@@ -365,6 +375,17 @@ mod tests {
 
     #[test]
     fn scanning() {
+        let (tokens, errors) = lexer::scan("[1,2,3]");
+        assert_eq!(errors.len(), 0);
+        assert_eq!(tokens.len(), 7);
+        assert_eq!(tokens[0].token, lexer::Token::LeftBracket);
+        assert_eq!(tokens[1].token, lexer::Token::Number(1.0));
+        assert_eq!(tokens[2].token, lexer::Token::Comma);
+        assert_eq!(tokens[3].token, lexer::Token::Number(2.0));
+        assert_eq!(tokens[4].token, lexer::Token::Comma);
+        assert_eq!(tokens[5].token, lexer::Token::Number(3.0));
+        assert_eq!(tokens[6].token, lexer::Token::RightBracket);
+
         let (tokens, errors) = lexer::scan("(())");
         assert_eq!(errors.len(), 0);
         assert_eq!(tokens.len(), 4);

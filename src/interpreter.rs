@@ -5,6 +5,7 @@ use std::fmt;
 
 pub enum Value {
     Boolean(bool),
+    List(Vec<Value>),
     Number(f64),
     Str(String),
     Nil,
@@ -14,6 +15,13 @@ impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Value::Boolean(b) => write!(f, "{}", b),
+            Value::List(list) => {
+                write!(f, "[")?;
+                for item in list {
+                    write!(f, " {}", item)?;
+                }
+                write!(f, " ]")
+            }
             Value::Number(n) => write!(f, "{}", n),
             Value::Str(s) => write!(f, "{}", s),
             Value::Nil => write!(f, "(nil)"),
@@ -96,6 +104,13 @@ fn value(token: &lexer::LexedToken) -> Value {
 pub fn eval(ast: &parser::Ast) -> Value {
     match ast {
         parser::Ast::BinaryOp(op, lhs, rhs) => binaryop(op, lhs, rhs),
+        parser::Ast::List(list) => {
+            let mut result = Vec::<Value>::new();
+            for item in list {
+                result.push(eval(item));
+            }
+            Value::List(result)
+        }
         parser::Ast::Value(t) => value(t),
         _ => Value::Nil,
     }
@@ -168,6 +183,42 @@ mod tests {
         match interpreter::eval(&ast) {
             interpreter::Value::Boolean(b) => {
                 assert!(!b);
+            }
+            _ => {
+                assert!(false);
+            }
+        }
+
+        let (mut tokens, errors) = lexer::scan("[2 2>5 3*4]");
+        assert_eq!(errors.len(), 0);
+        assert_eq!(tokens.len(), 9);
+        let ast = parser::parse(&mut tokens);
+        match interpreter::eval(&ast) {
+            interpreter::Value::List(list) => {
+                match list[0] {
+                    interpreter::Value::Number(t) => {
+                        assert_eq!(t, 2.0);
+                    }
+                    _ => {
+                        assert!(false);
+                    }
+                }
+                match list[1] {
+                    interpreter::Value::Boolean(b) => {
+                        assert!(!b);
+                    }
+                    _ => {
+                        assert!(false);
+                    }
+                }
+                match list[2] {
+                    interpreter::Value::Number(t) => {
+                        assert_eq!(t, 12.0);
+                    }
+                    _ => {
+                        assert!(false);
+                    }
+                }
             }
             _ => {
                 assert!(false);
