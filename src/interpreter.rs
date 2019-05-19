@@ -91,6 +91,54 @@ fn binaryop(op: &lexer::LexedToken, lhs: &parser::Ast, rhs: &parser::Ast) -> Val
     result
 }
 
+fn truthy(value: Value) -> bool {
+    match value {
+        Value::Boolean(b) => b,
+        Value::List(list) => {
+            if list.len() == 0 {
+                false
+            } else {
+                true
+            }
+        }
+        Value::Number(n) => {
+            if n == 0.0 {
+                false
+            } else {
+                true
+            }
+        }
+        Value::Str(s) => {
+            if s.len() == 0 {
+                false
+            } else {
+                true
+            }
+        }
+        Value::Nil => false,
+    }
+}
+
+fn unaryop(op: &lexer::LexedToken, value: &parser::Ast) -> Value {
+    let value = eval(value);
+    let mut result = Value::Nil;
+    match &op.token {
+        lexer::Token::Not => {
+            result = Value::Boolean(!truthy(value));
+        }
+        lexer::Token::Minus => {
+            if let Value::Number(n) = value {
+                result = Value::Number(-n);
+            } else {
+                // TODO: signal error
+            }
+        }
+        _ => {}
+    }
+
+    result
+}
+
 fn value(token: &lexer::LexedToken) -> Value {
     match &token.token {
         lexer::Token::False => Value::Boolean(false),
@@ -111,6 +159,7 @@ pub fn eval(ast: &parser::Ast) -> Value {
             }
             Value::List(result)
         }
+        parser::Ast::UnaryOp(op, v) => unaryop(op, v),
         parser::Ast::Value(t) => value(t),
         _ => Value::Nil,
     }
@@ -131,6 +180,32 @@ mod tests {
         match interpreter::eval(&ast) {
             interpreter::Value::Number(t) => {
                 assert_eq!(t, 2.0);
+            }
+            _ => {
+                assert!(false);
+            }
+        }
+
+        let (mut tokens, errors) = lexer::scan("-2");
+        assert_eq!(errors.len(), 0);
+        assert_eq!(tokens.len(), 2);
+        let ast = parser::parse(&mut tokens);
+        match interpreter::eval(&ast) {
+            interpreter::Value::Number(t) => {
+                assert_eq!(t, -2.0);
+            }
+            _ => {
+                assert!(false);
+            }
+        }
+
+        let (mut tokens, errors) = lexer::scan("!true");
+        assert_eq!(errors.len(), 0);
+        assert_eq!(tokens.len(), 2);
+        let ast = parser::parse(&mut tokens);
+        match interpreter::eval(&ast) {
+            interpreter::Value::Boolean(t) => {
+                assert!(!t);
             }
             _ => {
                 assert!(false);
