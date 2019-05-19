@@ -375,16 +375,14 @@ mod tests {
 
     #[test]
     fn scanning() {
-        let (tokens, errors) = lexer::scan("[1,2,3]");
+        let (tokens, errors) = lexer::scan("[1 2 3]");
         assert_eq!(errors.len(), 0);
-        assert_eq!(tokens.len(), 7);
+        assert_eq!(tokens.len(), 5);
         assert_eq!(tokens[0].token, lexer::Token::LeftBracket);
         assert_eq!(tokens[1].token, lexer::Token::Number(1.0));
-        assert_eq!(tokens[2].token, lexer::Token::Comma);
-        assert_eq!(tokens[3].token, lexer::Token::Number(2.0));
-        assert_eq!(tokens[4].token, lexer::Token::Comma);
-        assert_eq!(tokens[5].token, lexer::Token::Number(3.0));
-        assert_eq!(tokens[6].token, lexer::Token::RightBracket);
+        assert_eq!(tokens[2].token, lexer::Token::Number(2.0));
+        assert_eq!(tokens[3].token, lexer::Token::Number(3.0));
+        assert_eq!(tokens[4].token, lexer::Token::RightBracket);
 
         let (tokens, errors) = lexer::scan("(())");
         assert_eq!(errors.len(), 0);
