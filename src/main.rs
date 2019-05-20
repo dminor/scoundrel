@@ -14,7 +14,14 @@ fn main() -> io::Result<()> {
         match line {
             Ok(s) => match lexer::scan(&s) {
                 Ok(mut tokens) => match parser::parse(&mut tokens) {
-                    Ok(ast) => println!("{}", interpreter::eval(&ast)),
+                    Ok(ast) => match interpreter::eval(&ast) {
+                        Ok(v) => {
+                            println!("{}", v);
+                        }
+                        Err(err) => {
+                            println!("{}", err);
+                        }
+                    },
                     Err(err) => {
                         println!("{}", err);
                     }
