@@ -68,85 +68,111 @@ fn binaryop(
     rhs: &parser::Ast,
 ) -> Result<Value, RuntimeError> {
     match eval(lhs) {
-        Ok(lhs) => match eval(rhs) {
-            Ok(rhs) => {
-                match &op.token {
-                    lexer::Token::Plus => {
-                        if let Value::List(x) = lhs {
-                            if let Value::List(y) = rhs {
-                                let mut l = LinkedList::<Value>::new();
-                                l.extend(x.clone());
-                                l.extend(y.clone());
-                                return Ok(Value::List(l));
-                            } else {
-                                return Err(RuntimeError {
-                                    err: "Type mismatch, expected list".to_string(),
-                                    line: op.line,
-                                    pos: op.pos,
-                                });
-                            }
+        Ok(lhs) => match &op.token {
+            lexer::Token::And => {
+                if truthy(lhs) {
+                    match eval(rhs) {
+                        Ok(rhs) => {
+                            return Ok(Value::Boolean(truthy(rhs)));
                         }
-                        maybe_apply_op!(Number, Number, result, lhs, rhs, +, "number", op);
-                        if let Value::Str(x) = lhs {
-                            if let Value::Str(y) = rhs {
-                                return Ok(Value::Str(x + &y));
-                            } else {
-                                return Err(RuntimeError {
-                                    err: "Type mismatch, expected string".to_string(),
-                                    line: op.line,
-                                    pos: op.pos,
-                                });
-                            }
+                        Err(e) => Err(e),
+                    }
+                } else {
+                    return Ok(Value::Boolean(false));
+                }
+            }
+            lexer::Token::Or => {
+                if truthy(lhs) {
+                    return Ok(Value::Boolean(true));
+                } else {
+                    match eval(rhs) {
+                        Ok(rhs) => {
+                            return Ok(Value::Boolean(truthy(rhs)));
                         }
-                    }
-                    lexer::Token::Minus => {
-                        maybe_apply_op!(Number, Number, result, lhs, rhs, -, "number", op);
-                    }
-                    lexer::Token::Star => {
-                        maybe_apply_op!(Number, Number, result, lhs, rhs, *, "number", op);
-                    }
-                    lexer::Token::Slash => {
-                        maybe_apply_op!(Number, Number, result, lhs, rhs, /, "number", op);
-                    }
-                    lexer::Token::EqualEqual => {
-                        maybe_apply_op!(Boolean, Boolean, result, lhs, rhs, ==, "boolean", op);
-                        maybe_apply_op!(Number, Boolean, result, lhs, rhs, ==, "number", op);
-                        maybe_apply_op!(Str, Boolean, result, lhs, rhs, ==, "string", op);
-                    }
-                    lexer::Token::NotEqual => {
-                        maybe_apply_op!(Boolean, Boolean, result, lhs, rhs, !=, "boolean", op);
-                        maybe_apply_op!(Number, Boolean, result, lhs, rhs, !=, "number", op);
-                        maybe_apply_op!(Str, Boolean, result, lhs, rhs, !=, "string", op);
-                    }
-                    lexer::Token::Greater => {
-                        maybe_apply_op!(Number, Boolean, result, lhs, rhs, >, "number", op);
-                    }
-                    lexer::Token::GreaterEqual => {
-                        maybe_apply_op!(Number, Boolean, result, lhs, rhs, >=, "number", op);
-                    }
-                    lexer::Token::Less => {
-                        maybe_apply_op!(Number, Boolean, result, lhs, rhs, <, "number", op);
-                    }
-                    lexer::Token::LessEqual => {
-                        maybe_apply_op!(Number, Boolean, result, lhs, rhs, <=, "number", op);
-                    }
-                    _ => {
-                        return Err(RuntimeError {
-                            err: "Internal error: invalid binary operation.".to_string(),
-                            line: op.line,
-                            pos: op.pos,
-                        });
+                        Err(e) => Err(e),
                     }
                 }
-                let mut err = "Invalid arguments to ".to_string();
-                err.push_str(&op.token.to_string());
-                return Err(RuntimeError {
-                    err: err,
-                    line: op.line,
-                    pos: op.pos,
-                });
             }
-            Err(e) => Err(e),
+            _ => match eval(rhs) {
+                Ok(rhs) => {
+                    match &op.token {
+                        lexer::Token::Plus => {
+                            if let Value::List(x) = lhs {
+                                if let Value::List(y) = rhs {
+                                    let mut l = LinkedList::<Value>::new();
+                                    l.extend(x.clone());
+                                    l.extend(y.clone());
+                                    return Ok(Value::List(l));
+                                } else {
+                                    return Err(RuntimeError {
+                                        err: "Type mismatch, expected list".to_string(),
+                                        line: op.line,
+                                        pos: op.pos,
+                                    });
+                                }
+                            }
+                            maybe_apply_op!(Number, Number, result, lhs, rhs, +, "number", op);
+                            if let Value::Str(x) = lhs {
+                                if let Value::Str(y) = rhs {
+                                    return Ok(Value::Str(x + &y));
+                                } else {
+                                    return Err(RuntimeError {
+                                        err: "Type mismatch, expected string".to_string(),
+                                        line: op.line,
+                                        pos: op.pos,
+                                    });
+                                }
+                            }
+                        }
+                        lexer::Token::Minus => {
+                            maybe_apply_op!(Number, Number, result, lhs, rhs, -, "number", op);
+                        }
+                        lexer::Token::Star => {
+                            maybe_apply_op!(Number, Number, result, lhs, rhs, *, "number", op);
+                        }
+                        lexer::Token::Slash => {
+                            maybe_apply_op!(Number, Number, result, lhs, rhs, /, "number", op);
+                        }
+                        lexer::Token::EqualEqual => {
+                            maybe_apply_op!(Boolean, Boolean, result, lhs, rhs, ==, "boolean", op);
+                            maybe_apply_op!(Number, Boolean, result, lhs, rhs, ==, "number", op);
+                            maybe_apply_op!(Str, Boolean, result, lhs, rhs, ==, "string", op);
+                        }
+                        lexer::Token::NotEqual => {
+                            maybe_apply_op!(Boolean, Boolean, result, lhs, rhs, !=, "boolean", op);
+                            maybe_apply_op!(Number, Boolean, result, lhs, rhs, !=, "number", op);
+                            maybe_apply_op!(Str, Boolean, result, lhs, rhs, !=, "string", op);
+                        }
+                        lexer::Token::Greater => {
+                            maybe_apply_op!(Number, Boolean, result, lhs, rhs, >, "number", op);
+                        }
+                        lexer::Token::GreaterEqual => {
+                            maybe_apply_op!(Number, Boolean, result, lhs, rhs, >=, "number", op);
+                        }
+                        lexer::Token::Less => {
+                            maybe_apply_op!(Number, Boolean, result, lhs, rhs, <, "number", op);
+                        }
+                        lexer::Token::LessEqual => {
+                            maybe_apply_op!(Number, Boolean, result, lhs, rhs, <=, "number", op);
+                        }
+                        _ => {
+                            return Err(RuntimeError {
+                                err: "Internal error: invalid binary operation.".to_string(),
+                                line: op.line,
+                                pos: op.pos,
+                            });
+                        }
+                    }
+                    let mut err = "Invalid arguments to ".to_string();
+                    err.push_str(&op.token.to_string());
+                    return Err(RuntimeError {
+                        err: err,
+                        line: op.line,
+                        pos: op.pos,
+                    });
+                }
+                Err(e) => Err(e),
+            },
         },
         Err(e) => Err(e),
     }
@@ -286,6 +312,11 @@ mod tests {
         eval!("2+2<=5", Boolean, true);
         eval!("2+2>5", Boolean, false);
         eval!("2<>5", Boolean, true);
+        eval!("true or false", Boolean, true);
+        eval!("true or ''", Boolean, true);
+        eval!("[1] and 0.0", Boolean, false);
+        eval!("true or undefined", Boolean, true);
+        eval!("false and undefined", Boolean, false);
         eval!("'a'=='a'", Boolean, true);
         eval!("'hello ' + 'world'", Str, "hello world");
         evalfails!("2+true", "Type mismatch, expected number");
