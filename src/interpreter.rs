@@ -44,28 +44,22 @@ impl fmt::Display for Value {
     }
 }
 
-macro_rules! apply_binaryop {
-    (Value::Number, Value::Number, $r:ident, $lhs:ident, $rhs:ident, $op:tt) => (
-        if let Value::Number(x) = $lhs {
-            if let Value::Number(y) = $rhs {
-                $r = Value::Number(x $op y);
+macro_rules! maybe_apply_op {
+    ($in:tt, $out:tt, $r:ident, $lhs:ident, $rhs:ident, $rustop:tt, $err:expr, $op:ident) => (
+        if let Value::$in(x) = $lhs {
+            if let Value::$in(y) = $rhs {
+                return Ok(Value::$out(x $rustop y));
+            } else {
+                let mut err = "Type mismatch, expected ".to_string();
+                err.push_str($err);
+                return Err(RuntimeError {
+                    err: err,
+                    line: $op.line,
+                    pos: $op.pos,
+                });
             }
         }
     );
-    (Value::Number, Value::Boolean, $r:ident, $lhs:ident, $rhs:ident, $op:tt) => (
-        if let Value::Number(x) = $lhs {
-            if let Value::Number(y) = $rhs {
-                $r = Value::Boolean(x $op y);
-            }
-        }
-    );
-    (Value::Boolean, Value::Boolean, $r:ident, $lhs:ident, $rhs:ident, $op:tt) => (
-        if let Value::Boolean(x) = $lhs {
-            if let Value::Boolean(y) = $rhs {
-                $r = Value::Boolean(x $op y);
-            }
-        }
-    )
 }
 
 fn binaryop(
@@ -76,34 +70,51 @@ fn binaryop(
     match eval(lhs) {
         Ok(lhs) => match eval(rhs) {
             Ok(rhs) => {
-                let mut result = Value::Nil;
                 match &op.token {
                     lexer::Token::Plus => {
-                        apply_binaryop!(Value::Number, Value::Number, result, lhs, rhs, +);
+                        maybe_apply_op!(Number, Number, result, lhs, rhs, +, "number", op);
+                        if let Value::Str(x) = lhs {
+                            if let Value::Str(y) = rhs {
+                                return Ok(Value::Str(x + &y));
+                            } else {
+                                return Err(RuntimeError {
+                                    err: "Type mismatch, expected string".to_string(),
+                                    line: op.line,
+                                    pos: op.pos,
+                                });
+                            }
+                        }
                     }
                     lexer::Token::Minus => {
-                        apply_binaryop!(Value::Number, Value::Number, result, lhs, rhs, -);
+                        maybe_apply_op!(Number, Number, result, lhs, rhs, -, "number", op);
                     }
                     lexer::Token::Star => {
-                        apply_binaryop!(Value::Number, Value::Number, result, lhs, rhs, *);
+                        maybe_apply_op!(Number, Number, result, lhs, rhs, *, "number", op);
                     }
                     lexer::Token::Slash => {
-                        apply_binaryop!(Value::Number, Value::Number, result, lhs, rhs, /);
+                        maybe_apply_op!(Number, Number, result, lhs, rhs, /, "number", op);
                     }
                     lexer::Token::EqualEqual => {
-                        apply_binaryop!(Value::Number, Value::Boolean, result, lhs, rhs, ==);
+                        maybe_apply_op!(Boolean, Boolean, result, lhs, rhs, ==, "boolean", op);
+                        maybe_apply_op!(Number, Boolean, result, lhs, rhs, ==, "number", op);
+                        maybe_apply_op!(Str, Boolean, result, lhs, rhs, ==, "string", op);
+                    }
+                    lexer::Token::NotEqual => {
+                        maybe_apply_op!(Boolean, Boolean, result, lhs, rhs, !=, "boolean", op);
+                        maybe_apply_op!(Number, Boolean, result, lhs, rhs, !=, "number", op);
+                        maybe_apply_op!(Str, Boolean, result, lhs, rhs, !=, "string", op);
                     }
                     lexer::Token::Greater => {
-                        apply_binaryop!(Value::Number, Value::Boolean, result, lhs, rhs, >);
+                        maybe_apply_op!(Number, Boolean, result, lhs, rhs, >, "number", op);
                     }
                     lexer::Token::GreaterEqual => {
-                        apply_binaryop!(Value::Number, Value::Boolean, result, lhs, rhs, >=);
+                        maybe_apply_op!(Number, Boolean, result, lhs, rhs, >=, "number", op);
                     }
                     lexer::Token::Less => {
-                        apply_binaryop!(Value::Number, Value::Boolean, result, lhs, rhs, <);
+                        maybe_apply_op!(Number, Boolean, result, lhs, rhs, <, "number", op);
                     }
                     lexer::Token::LessEqual => {
-                        apply_binaryop!(Value::Number, Value::Boolean, result, lhs, rhs, <=);
+                        maybe_apply_op!(Number, Boolean, result, lhs, rhs, <=, "number", op);
                     }
                     _ => {
                         return Err(RuntimeError {
@@ -113,7 +124,13 @@ fn binaryop(
                         });
                     }
                 }
-                Ok(result)
+                let mut err = "Invalid arguments to ".to_string();
+                err.push_str(&op.token.to_string());
+                return Err(RuntimeError {
+                    err: err,
+                    line: op.line,
+                    pos: op.pos,
+                });
             }
             Err(e) => Err(e),
         },
@@ -214,7 +231,7 @@ mod tests {
     use crate::lexer;
     use crate::parser;
 
-    macro_rules! testeval {
+    macro_rules! eval {
         ($input:expr, $type:tt, $value:expr) => {{
             match lexer::scan($input) {
                 Ok(mut tokens) => match parser::parse(&mut tokens) {
@@ -234,15 +251,36 @@ mod tests {
         }};
     }
 
+    macro_rules! evalfails {
+        ($input:expr, $err:tt) => {{
+            match lexer::scan($input) {
+                Ok(mut tokens) => match parser::parse(&mut tokens) {
+                    Ok(ast) => match interpreter::eval(&ast) {
+                        Ok(_) => assert!(false),
+                        Err(e) => assert!(e.err.starts_with($err)),
+                    },
+                    _ => assert!(false),
+                },
+                _ => assert!(false),
+            }
+        }};
+    }
+
     #[test]
     fn evaling() {
-        testeval!("2", Number, 2.0);
-        testeval!("-2", Number, -2.0);
-        testeval!("!true", Boolean, false);
-        testeval!("2+2", Number, 4.0);
-        testeval!("2.2+2*5", Number, 12.2);
-        testeval!("2+2<=5", Boolean, true);
-        testeval!("2+2>5", Boolean, false);
+        eval!("2", Number, 2.0);
+        eval!("-2", Number, -2.0);
+        eval!("!true", Boolean, false);
+        eval!("2+2", Number, 4.0);
+        eval!("2.2+2*5", Number, 12.2);
+        eval!("2+2<=5", Boolean, true);
+        eval!("2+2>5", Boolean, false);
+        eval!("2!=5", Boolean, true);
+        eval!("'a'=='a'", Boolean, true);
+        eval!("'hello ' + 'world'", Str, "hello world");
+        evalfails!("2+true", "Type mismatch, expected number");
+        evalfails!("'a'+2", "Type mismatch, expected string");
+        evalfails!("true+true", "Invalid arguments to +");
 
         match lexer::scan("[2 2>5 3*4]") {
             Ok(mut tokens) => {
