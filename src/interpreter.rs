@@ -285,7 +285,7 @@ mod tests {
         eval!("2.2+2*5", Number, 12.2);
         eval!("2+2<=5", Boolean, true);
         eval!("2+2>5", Boolean, false);
-        eval!("2!=5", Boolean, true);
+        eval!("2<>5", Boolean, true);
         eval!("'a'=='a'", Boolean, true);
         eval!("'hello ' + 'world'", Str, "hello world");
         evalfails!("2+true", "Type mismatch, expected number");

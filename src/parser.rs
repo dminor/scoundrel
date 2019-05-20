@@ -502,7 +502,7 @@ mod tests {
             _ => assert!(false),
         }
 
-        match lexer::scan("x == y != false") {
+        match lexer::scan("x == y <> false") {
             Ok(mut tokens) => {
                 assert_eq!(tokens.len(), 5);
                 match parser::parse(&mut tokens) {

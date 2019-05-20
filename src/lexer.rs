@@ -59,7 +59,7 @@ impl fmt::Display for Token {
             Token::Slash => write!(f, "/"),
             Token::Star => write!(f, "*"),
             Token::Not => write!(f, "!"),
-            Token::NotEqual => write!(f, "!="),
+            Token::NotEqual => write!(f, "<>"),
             Token::EqualEqual => write!(f, "=="),
             Token::Greater => write!(f, ">"),
             Token::GreaterEqual => write!(f, ">="),
@@ -175,19 +175,9 @@ pub fn scan(src: &str) -> Result<Vec<LexedToken>, LexerError> {
                 '*' => {
                     push_token!(Token::Star, tokens, line, pos);
                 }
-                '!' => match chars.peek() {
-                    Some((_, c)) => {
-                        if *c == '=' {
-                            push_token!(Token::NotEqual, tokens, line, pos);
-                            chars.next();
-                        } else {
-                            push_token!(Token::Not, tokens, line, pos);
-                        }
-                    }
-                    None => {
-                        push_token!(Token::Not, tokens, line, pos);
-                    }
-                },
+                '!' => {
+                    push_token!(Token::Not, tokens, line, pos);
+                }
                 '=' => match chars.peek() {
                     Some((_, c)) => {
                         if *c == '=' {
@@ -220,6 +210,9 @@ pub fn scan(src: &str) -> Result<Vec<LexedToken>, LexerError> {
                     Some((_, c)) => {
                         if *c == '=' {
                             push_token!(Token::LessEqual, tokens, line, pos);
+                            chars.next();
+                        } else if *c == '>' {
+                            push_token!(Token::NotEqual, tokens, line, pos);
                             chars.next();
                         } else {
                             push_token!(Token::Less, tokens, line, pos);
@@ -453,7 +446,7 @@ mod tests {
             _ => assert!(false),
         }
 
-        match lexer::scan("!=") {
+        match lexer::scan("<>") {
             Ok(tokens) => {
                 assert_eq!(tokens.len(), 1);
                 assert_eq!(tokens[0].token, lexer::Token::NotEqual);
