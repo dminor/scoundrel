@@ -10,7 +10,6 @@ pub enum Value {
     List(LinkedList<Value>),
     Number(f64),
     Str(String),
-    Nil,
 }
 
 #[derive(Debug)]
@@ -41,7 +40,6 @@ impl fmt::Display for Value {
             }
             Value::Number(n) => write!(f, "{}", n),
             Value::Str(s) => write!(f, "{}", s),
-            Value::Nil => write!(f, "(nil)"),
         }
     }
 }
@@ -178,31 +176,27 @@ fn truthy(value: Value) -> bool {
                 true
             }
         }
-        Value::Nil => false,
     }
 }
 
 fn unaryop(op: &lexer::LexedToken, value: &parser::Ast) -> Result<Value, RuntimeError> {
     match eval(value) {
-        Ok(value) => {
-            let mut result = Value::Nil;
-            match &op.token {
-                lexer::Token::Not => Ok(Value::Boolean(!truthy(value))),
-                lexer::Token::Minus => {
-                    if let Value::Number(n) = value {
-                        result = Value::Number(-n);
-                    } else {
-                        // TODO: signal error
-                    }
-                    Ok(result)
-                }
+        Ok(value) => match &op.token {
+            lexer::Token::Not => Ok(Value::Boolean(!truthy(value))),
+            lexer::Token::Minus => match value {
+                Value::Number(n) => Ok(Value::Number(-n)),
                 _ => Err(RuntimeError {
-                    err: "Internal error: token has no value.".to_string(),
+                    err: "Type mismatch, expected number.".to_string(),
                     line: op.line,
                     pos: op.pos,
                 }),
-            }
-        }
+            },
+            _ => Err(RuntimeError {
+                err: "Internal error: invalid unary operator.".to_string(),
+                line: op.line,
+                pos: op.pos,
+            }),
+        },
         Err(e) => Err(e),
     }
 }
@@ -295,6 +289,7 @@ mod tests {
         eval!("'a'=='a'", Boolean, true);
         eval!("'hello ' + 'world'", Str, "hello world");
         evalfails!("2+true", "Type mismatch, expected number");
+        evalfails!("-true", "Type mismatch, expected number");
         evalfails!("'a'+2", "Type mismatch, expected string");
         evalfails!("true+true", "Invalid arguments to +");
         evalfails!("[1]+2", "Type mismatch, expected list");
