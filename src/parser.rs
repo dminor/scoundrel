@@ -210,7 +210,7 @@ fn value(tokens: &mut Vec<lexer::LexedToken>) -> Result<Ast, ParserError> {
             loop {
                 if tokens.len() == 0 {
                     return Err(ParserError {
-                        err: "Unexpected end of input when looking for ]".to_string(),
+                        err: "Unexpected end of input when looking for ].".to_string(),
                         line: token.line,
                         pos: token.pos,
                     });
@@ -230,7 +230,7 @@ fn value(tokens: &mut Vec<lexer::LexedToken>) -> Result<Ast, ParserError> {
             Ok(result) => {
                 if tokens.len() == 0 {
                     return Err(ParserError {
-                        err: "Unexpected end of input when looking for ]".to_string(),
+                        err: "Unexpected end of input when looking for ].".to_string(),
                         line: token.line,
                         pos: token.pos,
                     });
@@ -241,7 +241,7 @@ fn value(tokens: &mut Vec<lexer::LexedToken>) -> Result<Ast, ParserError> {
                     lexer::Token::RightParen => {}
                     _ => {
                         return Err(ParserError {
-                            err: "Unexpected token when looking for )".to_string(),
+                            err: "Unexpected token when looking for ).".to_string(),
                             line: next.line,
                             pos: next.pos,
                         });
@@ -252,7 +252,7 @@ fn value(tokens: &mut Vec<lexer::LexedToken>) -> Result<Ast, ParserError> {
             Err(e) => Err(e),
         },
         _ => Err(ParserError {
-            err: "Unexpected token".to_string(),
+            err: "Expected value.".to_string(),
             line: token.line,
             pos: token.pos,
         }),
@@ -268,131 +268,94 @@ mod tests {
     use crate::lexer;
     use crate::parser;
 
+    macro_rules! scan {
+        ($input:expr, $len:expr, parser::Ast::Value, $value:expr) => {{
+            match lexer::scan($input) {
+                Ok(mut tokens) => {
+                    assert_eq!(tokens.len(), $len);
+                    match parser::parse(&mut tokens) {
+                        Ok(parser::Ast::Value(t)) => {
+                                assert_eq!(t.token, $value);
+                        },
+                        _ => assert!(false),
+                    }
+                }
+                _ => assert!(false),
+            }
+        }};
+        ($input:expr, $len:expr, parser::Ast::UnaryOp, $op:expr, $value:expr) => {{
+            match lexer::scan($input) {
+                Ok(mut tokens) => {
+                    assert_eq!(tokens.len(), $len);
+                    match parser::parse(&mut tokens) {
+                        Ok(parser::Ast::UnaryOp(op, t)) => {
+                            assert_eq!(op.token, $op);
+                            match *t {
+                                parser::Ast::Value(t) => {
+                                    assert_eq!(t.token, $value);
+                                }
+                                _ => assert!(false),
+                            }
+                        }
+                        _ => assert!(false),
+
+                    }
+                }
+                _ => assert!(false),
+            }
+        }};
+        ($input:expr, $len:expr, parser::Ast::BinaryOp, $op:expr, $lhs:expr, $rhs:expr) => {{
+            match lexer::scan($input) {
+                Ok(mut tokens) => {
+                    assert_eq!(tokens.len(), $len);
+                    match parser::parse(&mut tokens) {
+                        Ok(parser::Ast::BinaryOp(op, lhs, rhs)) => {
+                                assert_eq!(op.token, $op);
+                                match *lhs {
+                                    parser::Ast::Value(t) => {
+                                        assert_eq!(t.token, $lhs);
+                                    }
+                                    _ => assert!(false),
+                                }
+                                match *rhs {
+                                    parser::Ast::Value(t) => {
+                                        assert_eq!(t.token, $rhs);
+                                    }
+                                    _ => assert!(false),
+                                }
+                        },
+                        _ => assert!(false),
+                    }
+                }
+                _ => assert!(false),
+            }
+        }};
+    }
+
+    macro_rules! scanfails {
+        ($input:expr, $len:expr, $err:tt) => {{
+            match lexer::scan($input) {
+                Ok(mut tokens) => {
+                    assert_eq!(tokens.len(), $len);
+                    match parser::parse(&mut tokens) {
+                        Ok(_) => assert!(false),
+                        Err(e) => assert!(e.err.starts_with($err)),
+                    }
+                }
+                _ => assert!(false),
+            }
+        }};
+    }
+
     #[test]
     fn parsing() {
-        match lexer::scan("2") {
-            Ok(mut tokens) => {
-                assert_eq!(tokens.len(), 1);
-                match parser::parse(&mut tokens) {
-                    Ok(ast) => match ast {
-                        parser::Ast::Value(t) => {
-                            assert_eq!(t.token, lexer::Token::Number(2.0));
-                        }
-                        _ => assert!(false),
-                    },
-                    _ => assert!(false),
-                }
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("(2)") {
-            Ok(mut tokens) => {
-                assert_eq!(tokens.len(), 3);
-                match parser::parse(&mut tokens) {
-                    Ok(ast) => match ast {
-                        parser::Ast::Value(t) => {
-                            assert_eq!(t.token, lexer::Token::Number(2.0));
-                        }
-                        _ => assert!(false),
-                    },
-                    _ => assert!(false),
-                }
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("false") {
-            Ok(mut tokens) => {
-                assert_eq!(tokens.len(), 1);
-                match parser::parse(&mut tokens) {
-                    Ok(ast) => match ast {
-                        parser::Ast::Value(t) => {
-                            assert_eq!(t.token, lexer::Token::False);
-                        }
-                        _ => assert!(false),
-                    },
-                    _ => assert!(false),
-                }
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("true") {
-            Ok(mut tokens) => {
-                assert_eq!(tokens.len(), 1);
-                match parser::parse(&mut tokens) {
-                    Ok(ast) => match ast {
-                        parser::Ast::Value(t) => {
-                            assert_eq!(t.token, lexer::Token::True);
-                        }
-                        _ => assert!(false),
-                    },
-                    _ => assert!(false),
-                }
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("x") {
-            Ok(mut tokens) => {
-                assert_eq!(tokens.len(), 1);
-                match parser::parse(&mut tokens) {
-                    Ok(ast) => match ast {
-                        parser::Ast::Value(t) => {
-                            assert_eq!(t.token, lexer::Token::Identifier("x".to_string()));
-                        }
-                        _ => assert!(false),
-                    },
-                    _ => assert!(false),
-                }
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("-2") {
-            Ok(mut tokens) => {
-                assert_eq!(tokens.len(), 2);
-                match parser::parse(&mut tokens) {
-                    Ok(ast) => match ast {
-                        parser::Ast::UnaryOp(op, t) => {
-                            assert_eq!(op.token, lexer::Token::Minus);
-                            match *t {
-                                parser::Ast::Value(t) => {
-                                    assert_eq!(t.token, lexer::Token::Number(2.0));
-                                }
-                                _ => assert!(false),
-                            }
-                        }
-                        _ => assert!(false),
-                    },
-                    _ => assert!(false),
-                }
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("not true") {
-            Ok(mut tokens) => {
-                assert_eq!(tokens.len(), 2);
-                match parser::parse(&mut tokens) {
-                    Ok(ast) => match ast {
-                        parser::Ast::UnaryOp(op, t) => {
-                            assert_eq!(op.token, lexer::Token::Not);
-                            match *t {
-                                parser::Ast::Value(t) => {
-                                    assert_eq!(t.token, lexer::Token::True);
-                                }
-                                _ => assert!(false),
-                            }
-                        }
-                        _ => assert!(false),
-                    },
-                    _ => assert!(false),
-                }
-            }
-            _ => assert!(false),
-        }
+        scan!("2", 1, parser::Ast::Value, lexer::Token::Number(2.0));
+        scan!("(2)", 3, parser::Ast::Value, lexer::Token::Number(2.0));
+        scan!("false", 1, parser::Ast::Value, lexer::Token::False);
+        scan!("true", 1, parser::Ast::Value, lexer::Token::True);
+        scan!("x", 1, parser::Ast::Value, lexer::Token::Identifier("x".to_string()));
+        scan!("-2", 2, parser::Ast::UnaryOp, lexer::Token::Minus, lexer::Token::Number(2.0));
+        scan!("not true", 2, parser::Ast::UnaryOp, lexer::Token::Not, lexer::Token::True);
 
         match lexer::scan("2*2/5") {
             Ok(mut tokens) => {
@@ -474,33 +437,7 @@ mod tests {
             _ => assert!(false),
         }
 
-        match lexer::scan("2<=3") {
-            Ok(mut tokens) => {
-                assert_eq!(tokens.len(), 3);
-                match parser::parse(&mut tokens) {
-                    Ok(ast) => match ast {
-                        parser::Ast::BinaryOp(op, lhs, rhs) => {
-                            assert_eq!(op.token, lexer::Token::LessEqual);
-                            match *lhs {
-                                parser::Ast::Value(t) => {
-                                    assert_eq!(t.token, lexer::Token::Number(2.0));
-                                }
-                                _ => assert!(false),
-                            }
-                            match *rhs {
-                                parser::Ast::Value(t) => {
-                                    assert_eq!(t.token, lexer::Token::Number(3.0));
-                                }
-                                _ => assert!(false),
-                            }
-                        }
-                        _ => assert!(false),
-                    },
-                    _ => assert!(false),
-                }
-            }
-            _ => assert!(false),
-        }
+        scan!("2<=3", 3, parser::Ast::BinaryOp, lexer::Token::LessEqual, lexer::Token::Number(2.0), lexer::Token::Number(3.0));
 
         match lexer::scan("x == y <> false") {
             Ok(mut tokens) => {
@@ -620,48 +557,9 @@ mod tests {
             _ => assert!(false),
         }
 
-        match lexer::scan("") {
-            Ok(mut tokens) => {
-                assert_eq!(tokens.len(), 0);
-                match parser::parse(&mut tokens) {
-                    Ok(_ast) => assert!(false),
-                    _ => {}
-                }
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("[") {
-            Ok(mut tokens) => {
-                assert_eq!(tokens.len(), 1);
-                match parser::parse(&mut tokens) {
-                    Ok(_ast) => assert!(false),
-                    _ => {}
-                }
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("(") {
-            Ok(mut tokens) => {
-                assert_eq!(tokens.len(), 1);
-                match parser::parse(&mut tokens) {
-                    Ok(_ast) => assert!(false),
-                    _ => {}
-                }
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("(2]") {
-            Ok(mut tokens) => {
-                assert_eq!(tokens.len(), 3);
-                match parser::parse(&mut tokens) {
-                    Ok(_ast) => assert!(false),
-                    _ => {}
-                }
-            }
-            _ => assert!(false),
-        }
+        scanfails!("", 0, "Unexpected end of input.");
+        scanfails!("[", 1, "Unexpected end of input when looking for ].");
+        scanfails!("(", 1, "Unexpected end of input.");
+        scanfails!("(2]", 3, "Unexpected token when looking for ).");
     }
 }
