@@ -1,11 +1,13 @@
 use crate::lexer;
 use crate::parser;
+use std::collections::LinkedList;
 use std::error::Error;
 use std::fmt;
 
+#[derive(Clone)]
 pub enum Value {
     Boolean(bool),
-    List(Vec<Value>),
+    List(LinkedList<Value>),
     Number(f64),
     Str(String),
     Nil,
@@ -72,6 +74,20 @@ fn binaryop(
             Ok(rhs) => {
                 match &op.token {
                     lexer::Token::Plus => {
+                        if let Value::List(x) = lhs {
+                            if let Value::List(y) = rhs {
+                                let mut l = LinkedList::<Value>::new();
+                                l.extend(x.clone());
+                                l.extend(y.clone());
+                                return Ok(Value::List(l));
+                            } else {
+                                return Err(RuntimeError {
+                                    err: "Type mismatch, expected list".to_string(),
+                                    line: op.line,
+                                    pos: op.pos,
+                                });
+                            }
+                        }
                         maybe_apply_op!(Number, Number, result, lhs, rhs, +, "number", op);
                         if let Value::Str(x) = lhs {
                             if let Value::Str(y) = rhs {
@@ -209,10 +225,10 @@ pub fn eval(ast: &parser::Ast) -> Result<Value, RuntimeError> {
     match ast {
         parser::Ast::BinaryOp(op, lhs, rhs) => binaryop(op, lhs, rhs),
         parser::Ast::List(list) => {
-            let mut result = Vec::<Value>::new();
+            let mut result = LinkedList::<Value>::new();
             for item in list {
                 match eval(item) {
-                    Ok(v) => result.push(v),
+                    Ok(v) => result.push_back(v),
                     Err(e) => {
                         return Err(e);
                     }
@@ -281,6 +297,7 @@ mod tests {
         evalfails!("2+true", "Type mismatch, expected number");
         evalfails!("'a'+2", "Type mismatch, expected string");
         evalfails!("true+true", "Invalid arguments to +");
+        evalfails!("[1]+2", "Type mismatch, expected list");
 
         match lexer::scan("[2 2>5 3*4]") {
             Ok(mut tokens) => {
@@ -288,24 +305,52 @@ mod tests {
                 match parser::parse(&mut tokens) {
                     Ok(ast) => match interpreter::eval(&ast) {
                         Ok(v) => match v {
-                            interpreter::Value::List(list) => {
-                                match list[0] {
-                                    interpreter::Value::Number(t) => {
+                            interpreter::Value::List(mut list) => {
+                                match list.pop_front() {
+                                    Some(interpreter::Value::Number(t)) => {
                                         assert_eq!(t, 2.0);
                                     }
                                     _ => assert!(false),
                                 }
-                                match list[1] {
-                                    interpreter::Value::Boolean(b) => {
+                                match list.pop_front() {
+                                    Some(interpreter::Value::Boolean(b)) => {
                                         assert!(!b);
                                     }
                                     _ => assert!(false),
                                 }
-                                match list[2] {
-                                    interpreter::Value::Number(t) => {
+                                match list.pop_front() {
+                                    Some(interpreter::Value::Number(t)) => {
                                         assert_eq!(t, 12.0);
                                     }
                                     _ => assert!(false),
+                                }
+                            }
+                            _ => assert!(false),
+                        },
+                        _ => assert!(false),
+                    },
+                    _ => assert!(false),
+                }
+            }
+            _ => assert!(false),
+        }
+
+        match lexer::scan("[1] + [2 3] + [4 5 6]") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 14);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match interpreter::eval(&ast) {
+                        Ok(v) => match v {
+                            interpreter::Value::List(list) => {
+                                let mut expected = 1.0;
+                                for item in list {
+                                    match item {
+                                        interpreter::Value::Number(t) => {
+                                            assert_eq!(t, expected);
+                                        }
+                                        _ => assert!(false),
+                                    }
+                                    expected += 1.0;
                                 }
                             }
                             _ => assert!(false),
