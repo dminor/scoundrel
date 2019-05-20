@@ -275,8 +275,8 @@ mod tests {
                     assert_eq!(tokens.len(), $len);
                     match parser::parse(&mut tokens) {
                         Ok(parser::Ast::Value(t)) => {
-                                assert_eq!(t.token, $value);
-                        },
+                            assert_eq!(t.token, $value);
+                        }
                         _ => assert!(false),
                     }
                 }
@@ -298,7 +298,6 @@ mod tests {
                             }
                         }
                         _ => assert!(false),
-
                     }
                 }
                 _ => assert!(false),
@@ -310,20 +309,20 @@ mod tests {
                     assert_eq!(tokens.len(), $len);
                     match parser::parse(&mut tokens) {
                         Ok(parser::Ast::BinaryOp(op, lhs, rhs)) => {
-                                assert_eq!(op.token, $op);
-                                match *lhs {
-                                    parser::Ast::Value(t) => {
-                                        assert_eq!(t.token, $lhs);
-                                    }
-                                    _ => assert!(false),
+                            assert_eq!(op.token, $op);
+                            match *lhs {
+                                parser::Ast::Value(t) => {
+                                    assert_eq!(t.token, $lhs);
                                 }
-                                match *rhs {
-                                    parser::Ast::Value(t) => {
-                                        assert_eq!(t.token, $rhs);
-                                    }
-                                    _ => assert!(false),
+                                _ => assert!(false),
+                            }
+                            match *rhs {
+                                parser::Ast::Value(t) => {
+                                    assert_eq!(t.token, $rhs);
                                 }
-                        },
+                                _ => assert!(false),
+                            }
+                        }
                         _ => assert!(false),
                     }
                 }
@@ -353,9 +352,26 @@ mod tests {
         scan!("(2)", 3, parser::Ast::Value, lexer::Token::Number(2.0));
         scan!("false", 1, parser::Ast::Value, lexer::Token::False);
         scan!("true", 1, parser::Ast::Value, lexer::Token::True);
-        scan!("x", 1, parser::Ast::Value, lexer::Token::Identifier("x".to_string()));
-        scan!("-2", 2, parser::Ast::UnaryOp, lexer::Token::Minus, lexer::Token::Number(2.0));
-        scan!("not true", 2, parser::Ast::UnaryOp, lexer::Token::Not, lexer::Token::True);
+        scan!(
+            "x",
+            1,
+            parser::Ast::Value,
+            lexer::Token::Identifier("x".to_string())
+        );
+        scan!(
+            "-2",
+            2,
+            parser::Ast::UnaryOp,
+            lexer::Token::Minus,
+            lexer::Token::Number(2.0)
+        );
+        scan!(
+            "not true",
+            2,
+            parser::Ast::UnaryOp,
+            lexer::Token::Not,
+            lexer::Token::True
+        );
 
         match lexer::scan("2*2/5") {
             Ok(mut tokens) => {
@@ -437,7 +453,14 @@ mod tests {
             _ => assert!(false),
         }
 
-        scan!("2<=3", 3, parser::Ast::BinaryOp, lexer::Token::LessEqual, lexer::Token::Number(2.0), lexer::Token::Number(3.0));
+        scan!(
+            "2<=3",
+            3,
+            parser::Ast::BinaryOp,
+            lexer::Token::LessEqual,
+            lexer::Token::Number(2.0),
+            lexer::Token::Number(3.0)
+        );
 
         match lexer::scan("x == y <> false") {
             Ok(mut tokens) => {
