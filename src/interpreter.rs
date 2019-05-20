@@ -277,10 +277,10 @@ mod tests {
     }
 
     #[test]
-    fn evaling() {
+    fn evals() {
         eval!("2", Number, 2.0);
         eval!("-2", Number, -2.0);
-        eval!("!true", Boolean, false);
+        eval!("not true", Boolean, false);
         eval!("2+2", Number, 4.0);
         eval!("2.2+2*5", Number, 12.2);
         eval!("2+2<=5", Boolean, true);

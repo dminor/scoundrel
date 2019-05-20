@@ -58,7 +58,6 @@ impl fmt::Display for Token {
             Token::Plus => write!(f, "+"),
             Token::Slash => write!(f, "/"),
             Token::Star => write!(f, "*"),
-            Token::Not => write!(f, "!"),
             Token::NotEqual => write!(f, "<>"),
             Token::EqualEqual => write!(f, "=="),
             Token::Greater => write!(f, ">"),
@@ -79,6 +78,7 @@ impl fmt::Display for Token {
             Token::Function => write!(f, "fn"),
             Token::If => write!(f, "if"),
             Token::Let => write!(f, "let"),
+            Token::Not => write!(f, "not"),
             Token::Or => write!(f, "or"),
             Token::Return => write!(f, "return"),
             Token::Then => write!(f, "then"),
@@ -174,9 +174,6 @@ pub fn scan(src: &str) -> Result<Vec<LexedToken>, LexerError> {
                 }
                 '*' => {
                     push_token!(Token::Star, tokens, line, pos);
-                }
-                '!' => {
-                    push_token!(Token::Not, tokens, line, pos);
                 }
                 '=' => match chars.peek() {
                     Some((_, c)) => {
@@ -313,6 +310,9 @@ pub fn scan(src: &str) -> Result<Vec<LexedToken>, LexerError> {
                         "let" => {
                             push_token!(Token::Let, tokens, line, pos);
                         }
+                        "not" => {
+                            push_token!(Token::Not, tokens, line, pos);
+                        }
                         "or" => {
                             push_token!(Token::Or, tokens, line, pos);
                         }
@@ -437,7 +437,7 @@ mod tests {
             _ => assert!(false),
         }
 
-        match lexer::scan("!!") {
+        match lexer::scan("not not") {
             Ok(tokens) => {
                 assert_eq!(tokens.len(), 2);
                 assert_eq!(tokens[0].token, lexer::Token::Not);
@@ -607,7 +607,7 @@ mod tests {
             _ => assert!(false),
         }
 
-        match lexer::scan("man and !mortal == false") {
+        match lexer::scan("man and not mortal == false") {
             Ok(tokens) => {
                 assert_eq!(tokens.len(), 6);
                 assert_eq!(tokens[0].token, lexer::Token::Identifier("man".to_string()));

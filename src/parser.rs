@@ -372,7 +372,7 @@ mod tests {
             _ => assert!(false),
         }
 
-        match lexer::scan("!true") {
+        match lexer::scan("not true") {
             Ok(mut tokens) => {
                 assert_eq!(tokens.len(), 2);
                 match parser::parse(&mut tokens) {
