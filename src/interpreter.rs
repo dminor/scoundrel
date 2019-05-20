@@ -214,139 +214,35 @@ mod tests {
     use crate::lexer;
     use crate::parser;
 
+    macro_rules! testeval {
+        ($input:expr, $type:tt, $value:expr) => {{
+            match lexer::scan($input) {
+                Ok(mut tokens) => match parser::parse(&mut tokens) {
+                    Ok(ast) => match interpreter::eval(&ast) {
+                        Ok(v) => match v {
+                            interpreter::Value::$type(t) => {
+                                assert_eq!(t, $value);
+                            }
+                            _ => assert!(false),
+                        },
+                        _ => assert!(false),
+                    },
+                    _ => assert!(false),
+                },
+                _ => assert!(false),
+            }
+        }};
+    }
+
     #[test]
     fn evaling() {
-        match lexer::scan("2") {
-            Ok(mut tokens) => {
-                assert_eq!(tokens.len(), 1);
-                match parser::parse(&mut tokens) {
-                    Ok(ast) => match interpreter::eval(&ast) {
-                        Ok(v) => match v {
-                            interpreter::Value::Number(t) => {
-                                assert_eq!(t, 2.0);
-                            }
-                            _ => assert!(false),
-                        },
-                        _ => assert!(false),
-                    },
-                    _ => assert!(false),
-                }
-            }
-            _ => assert!(false),
-        }
-        match lexer::scan("-2") {
-            Ok(mut tokens) => {
-                assert_eq!(tokens.len(), 2);
-                match parser::parse(&mut tokens) {
-                    Ok(ast) => match interpreter::eval(&ast) {
-                        Ok(v) => match v {
-                            interpreter::Value::Number(t) => {
-                                assert_eq!(t, -2.0);
-                            }
-                            _ => assert!(false),
-                        },
-                        _ => assert!(false),
-                    },
-                    _ => assert!(false),
-                }
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("!true") {
-            Ok(mut tokens) => {
-                assert_eq!(tokens.len(), 2);
-                match parser::parse(&mut tokens) {
-                    Ok(ast) => match interpreter::eval(&ast) {
-                        Ok(v) => match v {
-                            interpreter::Value::Boolean(t) => {
-                                assert!(!t);
-                            }
-                            _ => assert!(false),
-                        },
-                        _ => assert!(false),
-                    },
-                    _ => assert!(false),
-                }
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("2+2") {
-            Ok(mut tokens) => {
-                assert_eq!(tokens.len(), 3);
-                match parser::parse(&mut tokens) {
-                    Ok(ast) => match interpreter::eval(&ast) {
-                        Ok(v) => match v {
-                            interpreter::Value::Number(t) => {
-                                assert_eq!(t, 4.0);
-                            }
-                            _ => assert!(false),
-                        },
-                        _ => assert!(false),
-                    },
-                    _ => assert!(false),
-                }
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("2.2+2*5") {
-            Ok(mut tokens) => {
-                assert_eq!(tokens.len(), 5);
-                match parser::parse(&mut tokens) {
-                    Ok(ast) => match interpreter::eval(&ast) {
-                        Ok(v) => match v {
-                            interpreter::Value::Number(t) => {
-                                assert_eq!(t, 12.2);
-                            }
-                            _ => assert!(false),
-                        },
-                        _ => assert!(false),
-                    },
-                    _ => assert!(false),
-                }
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("2+2<=5") {
-            Ok(mut tokens) => {
-                assert_eq!(tokens.len(), 5);
-                match parser::parse(&mut tokens) {
-                    Ok(ast) => match interpreter::eval(&ast) {
-                        Ok(v) => match v {
-                            interpreter::Value::Boolean(b) => {
-                                assert!(b);
-                            }
-                            _ => assert!(false),
-                        },
-                        _ => assert!(false),
-                    },
-                    _ => assert!(false),
-                }
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("2+2>5") {
-            Ok(mut tokens) => {
-                assert_eq!(tokens.len(), 5);
-                match parser::parse(&mut tokens) {
-                    Ok(ast) => match interpreter::eval(&ast) {
-                        Ok(v) => match v {
-                            interpreter::Value::Boolean(b) => {
-                                assert!(!b);
-                            }
-                            _ => assert!(false),
-                        },
-                        _ => assert!(false),
-                    },
-                    _ => assert!(false),
-                }
-            }
-            _ => assert!(false),
-        }
+        testeval!("2", Number, 2.0);
+        testeval!("-2", Number, -2.0);
+        testeval!("!true", Boolean, false);
+        testeval!("2+2", Number, 4.0);
+        testeval!("2.2+2*5", Number, 12.2);
+        testeval!("2+2<=5", Boolean, true);
+        testeval!("2+2>5", Boolean, false);
 
         match lexer::scan("[2 2>5 3*4]") {
             Ok(mut tokens) => {
