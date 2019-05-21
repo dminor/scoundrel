@@ -1,4 +1,5 @@
 use crate::lexer;
+use std::collections::LinkedList;
 use std::error::Error;
 use std::fmt;
 
@@ -35,30 +36,35 @@ impl fmt::Display for ParserError {
 
 impl Error for ParserError {}
 
-fn expression(tokens: &mut Vec<lexer::LexedToken>) -> Result<Ast, ParserError> {
+fn expression(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError> {
     equality(tokens)
 }
 
-fn equality(tokens: &mut Vec<lexer::LexedToken>) -> Result<Ast, ParserError> {
+fn equality(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError> {
     let lhs = comparison(tokens);
     match lhs {
         Ok(mut lhs) => {
-            while tokens.len() > 0 {
-                let peek = &tokens[0];
-                match peek.token {
-                    lexer::Token::EqualEqual | lexer::Token::NotEqual => {
-                        let token = tokens.remove(0);
-                        let rhs = comparison(tokens);
-                        match rhs {
-                            Ok(rhs) => {
-                                lhs = Ast::BinaryOp(token, Box::new(lhs), Box::new(rhs));
-                            }
-                            Err(e) => {
-                                return Err(e);
+            loop {
+                match tokens.front() {
+                    Some(peek) => match peek.token {
+                        lexer::Token::EqualEqual | lexer::Token::NotEqual => {
+                            if let Some(token) = tokens.pop_front() {
+                                let rhs = comparison(tokens);
+                                match rhs {
+                                    Ok(rhs) => {
+                                        lhs = Ast::BinaryOp(token, Box::new(lhs), Box::new(rhs));
+                                    }
+                                    Err(e) => {
+                                        return Err(e);
+                                    }
+                                }
                             }
                         }
-                    }
-                    _ => {
+                        _ => {
+                            break;
+                        }
+                    },
+                    None => {
                         break;
                     }
                 }
@@ -69,29 +75,34 @@ fn equality(tokens: &mut Vec<lexer::LexedToken>) -> Result<Ast, ParserError> {
     }
 }
 
-fn comparison(tokens: &mut Vec<lexer::LexedToken>) -> Result<Ast, ParserError> {
+fn comparison(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError> {
     let lhs = addition(tokens);
     match lhs {
         Ok(mut lhs) => {
-            while tokens.len() > 0 {
-                let peek = &tokens[0];
-                match peek.token {
-                    lexer::Token::Greater
-                    | lexer::Token::GreaterEqual
-                    | lexer::Token::Less
-                    | lexer::Token::LessEqual => {
-                        let token = tokens.remove(0);
-                        let rhs = addition(tokens);
-                        match rhs {
-                            Ok(rhs) => {
-                                lhs = Ast::BinaryOp(token, Box::new(lhs), Box::new(rhs));
-                            }
-                            Err(e) => {
-                                return Err(e);
+            loop {
+                match tokens.front() {
+                    Some(peek) => match peek.token {
+                        lexer::Token::Greater
+                        | lexer::Token::GreaterEqual
+                        | lexer::Token::Less
+                        | lexer::Token::LessEqual => {
+                            if let Some(token) = tokens.pop_front() {
+                                let rhs = addition(tokens);
+                                match rhs {
+                                    Ok(rhs) => {
+                                        lhs = Ast::BinaryOp(token, Box::new(lhs), Box::new(rhs));
+                                    }
+                                    Err(e) => {
+                                        return Err(e);
+                                    }
+                                }
                             }
                         }
-                    }
-                    _ => {
+                        _ => {
+                            break;
+                        }
+                    },
+                    None => {
                         break;
                     }
                 }
@@ -102,57 +113,66 @@ fn comparison(tokens: &mut Vec<lexer::LexedToken>) -> Result<Ast, ParserError> {
     }
 }
 
-fn addition(tokens: &mut Vec<lexer::LexedToken>) -> Result<Ast, ParserError> {
+fn addition(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError> {
     let lhs = multiplication(tokens);
     match lhs {
         Ok(mut lhs) => {
-            while tokens.len() > 0 {
-                let peek = &tokens[0];
-                match peek.token {
-                    lexer::Token::Plus | lexer::Token::Minus | lexer::Token::Or => {
-                        let token = tokens.remove(0);
-                        let rhs = multiplication(tokens);
-                        match rhs {
-                            Ok(rhs) => {
-                                lhs = Ast::BinaryOp(token, Box::new(lhs), Box::new(rhs));
-                            }
-                            Err(e) => {
-                                return Err(e);
+            loop {
+                match tokens.front() {
+                    Some(peek) => match peek.token {
+                        lexer::Token::Plus | lexer::Token::Minus | lexer::Token::Or => {
+                            if let Some(token) = tokens.pop_front() {
+                                let rhs = multiplication(tokens);
+                                match rhs {
+                                    Ok(rhs) => {
+                                        lhs = Ast::BinaryOp(token, Box::new(lhs), Box::new(rhs));
+                                    }
+                                    Err(e) => {
+                                        return Err(e);
+                                    }
+                                }
                             }
                         }
-                    }
-                    _ => {
+                        _ => {
+                            break;
+                        }
+                    },
+                    None => {
                         break;
                     }
                 }
             }
-
             Ok(lhs)
         }
         Err(e) => Err(e),
     }
 }
 
-fn multiplication(tokens: &mut Vec<lexer::LexedToken>) -> Result<Ast, ParserError> {
+fn multiplication(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError> {
     let lhs = unary(tokens);
     match lhs {
         Ok(mut lhs) => {
-            while tokens.len() > 0 {
-                let peek = &tokens[0];
-                match peek.token {
-                    lexer::Token::Slash | lexer::Token::Star | lexer::Token::And => {
-                        let token = tokens.remove(0);
-                        let rhs = unary(tokens);
-                        match rhs {
-                            Ok(rhs) => {
-                                lhs = Ast::BinaryOp(token, Box::new(lhs), Box::new(rhs));
-                            }
-                            Err(e) => {
-                                return Err(e);
+            loop {
+                match tokens.front() {
+                    Some(peek) => match peek.token {
+                        lexer::Token::Slash | lexer::Token::Star | lexer::Token::And => {
+                            if let Some(token) = tokens.pop_front() {
+                                let rhs = unary(tokens);
+                                match rhs {
+                                    Ok(rhs) => {
+                                        lhs = Ast::BinaryOp(token, Box::new(lhs), Box::new(rhs));
+                                    }
+                                    Err(e) => {
+                                        return Err(e);
+                                    }
+                                }
                             }
                         }
-                    }
-                    _ => {
+                        _ => {
+                            break;
+                        }
+                    },
+                    None => {
                         break;
                     }
                 }
@@ -163,103 +183,116 @@ fn multiplication(tokens: &mut Vec<lexer::LexedToken>) -> Result<Ast, ParserErro
     }
 }
 
-fn unary(tokens: &mut Vec<lexer::LexedToken>) -> Result<Ast, ParserError> {
-    if tokens.len() == 0 {
-        return Err(ParserError {
-            err: "Unexpected end of input.".to_string(),
-            line: 0,
-            pos: 0,
-        });
-    }
-
-    let peek = &tokens[0];
-    match peek.token {
-        lexer::Token::Minus | lexer::Token::Not => {
-            let token = tokens.remove(0);
-            match value(tokens) {
-                Ok(n) => Ok(Ast::UnaryOp(token, Box::new(n))),
-                Err(e) => Err(e),
-            }
-        }
-        _ => value(tokens),
-    }
-}
-
-fn value(tokens: &mut Vec<lexer::LexedToken>) -> Result<Ast, ParserError> {
-    if tokens.len() == 0 {
-        return Err(ParserError {
-            err: "Unexpected end of input.".to_string(),
-            line: 0,
-            pos: 0,
-        });
-    }
-
-    let token = tokens.remove(0);
-    match token.token {
-        lexer::Token::False => Ok(Ast::Value(token)),
-        lexer::Token::Identifier(s) => Ok(Ast::Value(lexer::LexedToken {
-            token: lexer::Token::Identifier(s),
-            line: token.line,
-            pos: token.pos,
-        })),
-        lexer::Token::True => Ok(Ast::Value(token)),
-        lexer::Token::Number(_) => Ok(Ast::Value(token)),
-        lexer::Token::Str(_) => Ok(Ast::Value(token)),
-        lexer::Token::LeftBracket => {
-            let mut items = Vec::<Ast>::new();
-            loop {
-                if tokens.len() == 0 {
-                    return Err(ParserError {
-                        err: "Unexpected end of input when looking for ].".to_string(),
-                        line: token.line,
-                        pos: token.pos,
-                    });
-                }
-                let peek = &tokens[0];
-                if let lexer::Token::RightBracket = peek.token {
-                    tokens.remove(0);
-                    break;
-                }
-                if let Ok(item) = expression(tokens) {
-                    items.push(item);
-                }
-            }
-            Ok(Ast::List(items))
-        }
-        lexer::Token::LeftParen => match expression(tokens) {
-            Ok(result) => {
-                if tokens.len() == 0 {
-                    return Err(ParserError {
-                        err: "Unexpected end of input when looking for ].".to_string(),
-                        line: token.line,
-                        pos: token.pos,
-                    });
-                }
-
-                let next = tokens.remove(0);
-                match next.token {
-                    lexer::Token::RightParen => {}
-                    _ => {
+fn unary(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError> {
+    match tokens.front() {
+        Some(peek) => {
+            match peek.token {
+                lexer::Token::Minus | lexer::Token::Not => {
+                    if let Some(token) = tokens.pop_front() {
+                        match value(tokens) {
+                            Ok(n) => Ok(Ast::UnaryOp(token, Box::new(n))),
+                            Err(e) => Err(e),
+                        }
+                    } else {
+                        // Unreachable
                         return Err(ParserError {
-                            err: "Unexpected token when looking for ).".to_string(),
-                            line: next.line,
-                            pos: next.pos,
+                            err: "Unexpected end of input.".to_string(),
+                            line: 0,
+                            pos: 0,
                         });
                     }
                 }
-                Ok(result)
+                _ => value(tokens),
             }
-            Err(e) => Err(e),
-        },
-        _ => Err(ParserError {
-            err: "Expected value.".to_string(),
-            line: token.line,
-            pos: token.pos,
-        }),
+        }
+        None => {
+            return Err(ParserError {
+                err: "Unexpected end of input.".to_string(),
+                line: 0,
+                pos: 0,
+            });
+        }
     }
 }
 
-pub fn parse(tokens: &mut Vec<lexer::LexedToken>) -> Result<Ast, ParserError> {
+fn value(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError> {
+    match tokens.pop_front() {
+        Some(token) => match token.token {
+            lexer::Token::False => Ok(Ast::Value(token)),
+            lexer::Token::Identifier(s) => Ok(Ast::Value(lexer::LexedToken {
+                token: lexer::Token::Identifier(s),
+                line: token.line,
+                pos: token.pos,
+            })),
+            lexer::Token::True => Ok(Ast::Value(token)),
+            lexer::Token::Number(_) => Ok(Ast::Value(token)),
+            lexer::Token::Str(_) => Ok(Ast::Value(token)),
+            lexer::Token::LeftBracket => {
+                let mut items = Vec::<Ast>::new();
+                loop {
+                    match tokens.front() {
+                        Some(peek) => {
+                            if let lexer::Token::RightBracket = peek.token {
+                                tokens.pop_front();
+                                break;
+                            }
+                            if let Ok(item) = expression(tokens) {
+                                items.push(item);
+                            }
+                        }
+                        None => {
+                            return Err(ParserError {
+                                err: "Unexpected end of input when looking for ].".to_string(),
+                                line: token.line,
+                                pos: token.pos,
+                            });
+                        }
+                    }
+                }
+                Ok(Ast::List(items))
+            }
+            lexer::Token::LeftParen => match expression(tokens) {
+                Ok(result) => match tokens.pop_front() {
+                    Some(next) => {
+                        match next.token {
+                            lexer::Token::RightParen => {}
+                            _ => {
+                                return Err(ParserError {
+                                    err: "Unexpected token when looking for ).".to_string(),
+                                    line: next.line,
+                                    pos: next.pos,
+                                });
+                            }
+                        }
+                        Ok(result)
+                    }
+                    None => {
+                        return Err(ParserError {
+                            err: "Unexpected end of input when looking for ].".to_string(),
+                            line: token.line,
+                            pos: token.pos,
+                        });
+                    }
+                },
+                Err(e) => Err(e),
+            },
+            _ => Err(ParserError {
+                err: "Expected value.".to_string(),
+                line: token.line,
+                pos: token.pos,
+            }),
+        },
+        None => {
+            return Err(ParserError {
+                err: "Unexpected end of input.".to_string(),
+                line: 0,
+                pos: 0,
+            });
+        }
+    }
+}
+
+pub fn parse(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError> {
     expression(tokens)
 }
 
@@ -268,7 +301,7 @@ mod tests {
     use crate::lexer;
     use crate::parser;
 
-    macro_rules! scan {
+    macro_rules! parse {
         ($input:expr, $len:expr, parser::Ast::Value, $value:expr) => {{
             match lexer::scan($input) {
                 Ok(mut tokens) => {
@@ -331,7 +364,7 @@ mod tests {
         }};
     }
 
-    macro_rules! scanfails {
+    macro_rules! parsefails {
         ($input:expr, $len:expr, $err:tt) => {{
             match lexer::scan($input) {
                 Ok(mut tokens) => {
@@ -348,24 +381,24 @@ mod tests {
 
     #[test]
     fn parsing() {
-        scan!("2", 1, parser::Ast::Value, lexer::Token::Number(2.0));
-        scan!("(2)", 3, parser::Ast::Value, lexer::Token::Number(2.0));
-        scan!("false", 1, parser::Ast::Value, lexer::Token::False);
-        scan!("true", 1, parser::Ast::Value, lexer::Token::True);
-        scan!(
+        parse!("2", 1, parser::Ast::Value, lexer::Token::Number(2.0));
+        parse!("(2)", 3, parser::Ast::Value, lexer::Token::Number(2.0));
+        parse!("false", 1, parser::Ast::Value, lexer::Token::False);
+        parse!("true", 1, parser::Ast::Value, lexer::Token::True);
+        parse!(
             "x",
             1,
             parser::Ast::Value,
             lexer::Token::Identifier("x".to_string())
         );
-        scan!(
+        parse!(
             "-2",
             2,
             parser::Ast::UnaryOp,
             lexer::Token::Minus,
             lexer::Token::Number(2.0)
         );
-        scan!(
+        parse!(
             "not true",
             2,
             parser::Ast::UnaryOp,
@@ -453,7 +486,7 @@ mod tests {
             _ => assert!(false),
         }
 
-        scan!(
+        parse!(
             "2<=3",
             3,
             parser::Ast::BinaryOp,
@@ -462,7 +495,7 @@ mod tests {
             lexer::Token::Number(3.0)
         );
 
-        scan!(
+        parse!(
             "true or false",
             3,
             parser::Ast::BinaryOp,
@@ -635,10 +668,10 @@ mod tests {
             _ => assert!(false),
         }
 
-        scanfails!("", 0, "Unexpected end of input.");
-        scanfails!("[", 1, "Unexpected end of input when looking for ].");
-        scanfails!("(", 1, "Unexpected end of input.");
-        scanfails!("(2]", 3, "Unexpected token when looking for ).");
-        scanfails!("true or", 2, "Unexpected end of input.");
+        parsefails!("", 0, "Unexpected end of input.");
+        parsefails!("[", 1, "Unexpected end of input when looking for ].");
+        parsefails!("(", 1, "Unexpected end of input.");
+        parsefails!("(2]", 3, "Unexpected token when looking for ).");
+        parsefails!("true or", 2, "Unexpected end of input.");
     }
 }

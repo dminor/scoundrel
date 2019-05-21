@@ -10,6 +10,7 @@ fn main() -> io::Result<()> {
     println!("Welcome to Scoundrel!");
     print!("> ");
     stdout.flush()?;
+
     for line in stdin.lock().lines() {
         match line {
             Ok(s) => match lexer::scan(&s) {

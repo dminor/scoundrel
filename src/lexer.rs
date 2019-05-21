@@ -1,3 +1,4 @@
+use std::collections::LinkedList;
 use std::error::Error;
 use std::fmt;
 
@@ -111,7 +112,7 @@ pub struct LexedToken {
 
 macro_rules! push_token {
     ($T:expr, $tokens:ident, $line:ident, $pos:ident) => {
-        $tokens.push({
+        $tokens.push_back({
             LexedToken {
                 token: $T,
                 line: $line,
@@ -121,9 +122,9 @@ macro_rules! push_token {
     };
 }
 
-pub fn scan(src: &str) -> Result<Vec<LexedToken>, LexerError> {
+pub fn scan(src: &str) -> Result<LinkedList<LexedToken>, LexerError> {
     let mut line = 0;
-    let mut tokens = Vec::<LexedToken>::new();
+    let mut tokens = LinkedList::<LexedToken>::new();
     let mut chars = src.char_indices().peekable();
     loop {
         match chars.next() {
@@ -146,7 +147,7 @@ pub fn scan(src: &str) -> Result<Vec<LexedToken>, LexerError> {
                             push_token!(Token::ColonEqual, tokens, line, pos);
                         } else {
                             return Err(LexerError {
-                                err: "unexpected token while parsing :=".to_string(),
+                                err: "Unexpected token while parsing :=".to_string(),
                                 line: line,
                                 pos: pos,
                             });
@@ -154,7 +155,7 @@ pub fn scan(src: &str) -> Result<Vec<LexedToken>, LexerError> {
                     }
                     _ => {
                         return Err(LexerError {
-                            err: "unexpected end of input while parsing :=".to_string(),
+                            err: "Unexpected end of input while parsing :=".to_string(),
                             line: line,
                             pos: pos,
                         });
@@ -182,7 +183,7 @@ pub fn scan(src: &str) -> Result<Vec<LexedToken>, LexerError> {
                             chars.next();
                         } else {
                             return Err(LexerError {
-                                err: "unexpected end of input while parsing ==".to_string(),
+                                err: "Unexpected end of input while parsing ==".to_string(),
                                 line: line,
                                 pos: pos,
                             });
@@ -235,7 +236,7 @@ pub fn scan(src: &str) -> Result<Vec<LexedToken>, LexerError> {
                                 }
                                 '\n' => {
                                     return Err(LexerError {
-                                        err: "unexpected end of line while lexing string"
+                                        err: "Unexpected end of line while lexing string"
                                             .to_string(),
                                         line: line,
                                         pos: pos,
@@ -245,7 +246,7 @@ pub fn scan(src: &str) -> Result<Vec<LexedToken>, LexerError> {
                             },
                             None => {
                                 return Err(LexerError {
-                                    err: "unexpected end of input while lexing string".to_string(),
+                                    err: "Unexpected end of input while lexing string".to_string(),
                                     line: line,
                                     pos: pos,
                                 });
@@ -352,370 +353,168 @@ pub fn scan(src: &str) -> Result<Vec<LexedToken>, LexerError> {
 mod tests {
     use crate::lexer;
 
+    macro_rules! scan {
+        ($input:expr, $( $value:expr),* ) => {{
+            match lexer::scan($input) {
+                Ok(mut tokens) => {
+                    $(
+                        match tokens.pop_front() {
+                            Some(t) => {
+                                assert_eq!(t.token, $value);
+                            }
+                            None => {}
+                        }
+                    )*
+                    assert_eq!(tokens.len(), 0);
+                }
+                _ => assert!(false),
+            }
+        }};
+    }
+
+    macro_rules! scanfails {
+        ($input:expr, $err:tt) => {{
+            match lexer::scan($input) {
+                Ok(_) => assert!(false),
+                Err(e) => assert!(e.err.starts_with($err)),
+            }
+        }};
+    }
+
     #[test]
     fn scanning() {
-        match lexer::scan("[1 2 3]") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 5);
-                assert_eq!(tokens[0].token, lexer::Token::LeftBracket);
-                assert_eq!(tokens[1].token, lexer::Token::Number(1.0));
-                assert_eq!(tokens[2].token, lexer::Token::Number(2.0));
-                assert_eq!(tokens[3].token, lexer::Token::Number(3.0));
-                assert_eq!(tokens[4].token, lexer::Token::RightBracket);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("(())") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 4);
-                assert_eq!(tokens[0].token, lexer::Token::LeftParen);
-                assert_eq!(tokens[1].token, lexer::Token::LeftParen);
-                assert_eq!(tokens[2].token, lexer::Token::RightParen);
-                assert_eq!(tokens[3].token, lexer::Token::RightParen);
-                assert_eq!(tokens[3].line, 0);
-                assert_eq!(tokens[3].pos, 3);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan(":=") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 1);
-                assert_eq!(tokens[0].token, lexer::Token::ColonEqual);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("::") {
-            Ok(_) => assert!(false),
-            _ => {}
-        }
-
-        match lexer::scan(":") {
-            Ok(_) => assert!(false),
-            _ => {}
-        }
-
-        match lexer::scan(",") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 1);
-                assert_eq!(tokens[0].token, lexer::Token::Comma);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("-") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 1);
-                assert_eq!(tokens[0].token, lexer::Token::Minus);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("+") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 1);
-                assert_eq!(tokens[0].token, lexer::Token::Plus);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("/") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 1);
-                assert_eq!(tokens[0].token, lexer::Token::Slash);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("*") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 1);
-                assert_eq!(tokens[0].token, lexer::Token::Star);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("not not") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 2);
-                assert_eq!(tokens[0].token, lexer::Token::Not);
-                assert_eq!(tokens[1].token, lexer::Token::Not);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("<>") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 1);
-                assert_eq!(tokens[0].token, lexer::Token::NotEqual);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("==") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 1);
-                assert_eq!(tokens[0].token, lexer::Token::EqualEqual);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("<<") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 2);
-                assert_eq!(tokens[0].token, lexer::Token::Less);
-                assert_eq!(tokens[1].token, lexer::Token::Less);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("<=") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 1);
-                assert_eq!(tokens[0].token, lexer::Token::LessEqual);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan(">>") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 2);
-                assert_eq!(tokens[0].token, lexer::Token::Greater);
-                assert_eq!(tokens[1].token, lexer::Token::Greater);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan(">=") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 1);
-                assert_eq!(tokens[0].token, lexer::Token::GreaterEqual);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan(" +\n\n   +  \n") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 2);
-                assert_eq!(tokens[0].token, lexer::Token::Plus);
-                assert_eq!(tokens[0].line, 0);
-                assert_eq!(tokens[0].pos, 1);
-                assert_eq!(tokens[1].token, lexer::Token::Plus);
-                assert_eq!(tokens[1].line, 2);
-                assert_eq!(tokens[1].pos, 7);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("'blahblah blah") {
-            Ok(_) => assert!(false),
-            _ => {}
-        }
-
-        match lexer::scan("'blahblah blah'") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 1);
-                assert_eq!(
-                    tokens[0].token,
-                    lexer::Token::Str("blahblah blah".to_string())
-                );
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("4") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 1);
-                assert_eq!(tokens[0].token, lexer::Token::Number(4.0));
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("42") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 1);
-                assert_eq!(tokens[0].token, lexer::Token::Number(42.0));
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("42 ") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 1);
-                assert_eq!(tokens[0].token, lexer::Token::Number(42.0));
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("4.2") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 1);
-                assert_eq!(tokens[0].token, lexer::Token::Number(4.2));
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("4+2") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 3);
-                assert_eq!(tokens[0].token, lexer::Token::Number(4.0));
-                assert_eq!(tokens[1].token, lexer::Token::Plus);
-                assert_eq!(tokens[2].token, lexer::Token::Number(2.0));
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("4 + 2") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 3);
-                assert_eq!(tokens[0].token, lexer::Token::Number(4.0));
-                assert_eq!(tokens[1].token, lexer::Token::Plus);
-                assert_eq!(tokens[2].token, lexer::Token::Number(2.0));
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("4 2") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 2);
-                assert_eq!(tokens[0].token, lexer::Token::Number(4.0));
-                assert_eq!(tokens[1].token, lexer::Token::Number(2.0));
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("let y := x + 1") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 6);
-                assert_eq!(tokens[0].token, lexer::Token::Let);
-                assert_eq!(tokens[1].token, lexer::Token::Identifier("y".to_string()));
-                assert_eq!(tokens[2].token, lexer::Token::ColonEqual);
-                assert_eq!(tokens[3].token, lexer::Token::Identifier("x".to_string()));
-                assert_eq!(tokens[4].token, lexer::Token::Plus);
-                assert_eq!(tokens[5].token, lexer::Token::Number(1.0));
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("xs") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 1);
-                assert_eq!(tokens[0].token, lexer::Token::Identifier("xs".to_string()));
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("man and not mortal == false") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 6);
-                assert_eq!(tokens[0].token, lexer::Token::Identifier("man".to_string()));
-                assert_eq!(tokens[1].token, lexer::Token::And);
-                assert_eq!(tokens[2].token, lexer::Token::Not);
-                assert_eq!(
-                    tokens[3].token,
-                    lexer::Token::Identifier("mortal".to_string())
-                );
-                assert_eq!(tokens[4].token, lexer::Token::EqualEqual);
-                assert_eq!(tokens[5].token, lexer::Token::False);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("fn x(arg)\n    return arg*2\nend") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 10);
-                assert_eq!(tokens[0].token, lexer::Token::Function);
-                assert_eq!(tokens[1].token, lexer::Token::Identifier("x".to_string()));
-                assert_eq!(tokens[2].token, lexer::Token::LeftParen);
-                assert_eq!(tokens[3].token, lexer::Token::Identifier("arg".to_string()));
-                assert_eq!(tokens[4].token, lexer::Token::RightParen);
-                assert_eq!(tokens[5].token, lexer::Token::Return);
-                assert_eq!(tokens[6].token, lexer::Token::Identifier("arg".to_string()));
-                assert_eq!(tokens[7].token, lexer::Token::Star);
-                assert_eq!(tokens[8].token, lexer::Token::Number(2.0));
-                assert_eq!(tokens[9].token, lexer::Token::End);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("if x then\n    1\nelsif y then\n    2\nelse\n    3\nend") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 11);
-                assert_eq!(tokens[0].token, lexer::Token::If);
-                assert_eq!(tokens[1].token, lexer::Token::Identifier("x".to_string()));
-                assert_eq!(tokens[2].token, lexer::Token::Then);
-                assert_eq!(tokens[3].token, lexer::Token::Number(1.0));
-                assert_eq!(tokens[4].token, lexer::Token::Elsif);
-                assert_eq!(tokens[5].token, lexer::Token::Identifier("y".to_string()));
-                assert_eq!(tokens[6].token, lexer::Token::Then);
-                assert_eq!(tokens[7].token, lexer::Token::Number(2.0));
-                assert_eq!(tokens[8].token, lexer::Token::Else);
-                assert_eq!(tokens[9].token, lexer::Token::Number(3.0));
-                assert_eq!(tokens[10].token, lexer::Token::End);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("while true or false do\n    i := i + 1\n    break\nend") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 12);
-                assert_eq!(tokens[0].token, lexer::Token::While);
-                assert_eq!(tokens[1].token, lexer::Token::True);
-                assert_eq!(tokens[2].token, lexer::Token::Or);
-                assert_eq!(tokens[3].token, lexer::Token::False);
-                assert_eq!(tokens[4].token, lexer::Token::Do);
-                assert_eq!(tokens[5].token, lexer::Token::Identifier("i".to_string()));
-                assert_eq!(tokens[6].token, lexer::Token::ColonEqual);
-                assert_eq!(tokens[7].token, lexer::Token::Identifier("i".to_string()));
-                assert_eq!(tokens[8].token, lexer::Token::Plus);
-                assert_eq!(tokens[9].token, lexer::Token::Number(1.0));
-                assert_eq!(tokens[10].token, lexer::Token::Break);
-                assert_eq!(tokens[11].token, lexer::Token::End);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("continue") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 1);
-                assert_eq!(tokens[0].token, lexer::Token::Continue);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("Ὦ := 'φῶς'") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 3);
-                assert_eq!(tokens[0].token, lexer::Token::Identifier("Ὦ".to_string()));
-                assert_eq!(tokens[1].token, lexer::Token::ColonEqual);
-                assert_eq!(tokens[2].token, lexer::Token::Str("φῶς".to_string()));
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("abd(def)") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 4);
-                assert_eq!(tokens[0].token, lexer::Token::Identifier("abd".to_string()));
-                assert_eq!(tokens[1].token, lexer::Token::LeftParen);
-                assert_eq!(tokens[2].token, lexer::Token::Identifier("def".to_string()));
-                assert_eq!(tokens[3].token, lexer::Token::RightParen);
-            }
-            _ => assert!(false),
-        }
-
-        match lexer::scan("&$123") {
-            Ok(tokens) => {
-                assert_eq!(tokens.len(), 2);
-                assert_eq!(tokens[0].token, lexer::Token::Identifier("&".to_string()));
-                assert_eq!(
-                    tokens[1].token,
-                    lexer::Token::Identifier("$123".to_string())
-                );
-            }
-            _ => assert!(false),
-        }
+        scan!(
+            "[1 2 3]",
+            lexer::Token::LeftBracket,
+            lexer::Token::Number(1.0),
+            lexer::Token::Number(2.0),
+            lexer::Token::Number(3.0),
+            lexer::Token::RightBracket
+        );
+        scan!(
+            "[1 2 3]",
+            lexer::Token::LeftBracket,
+            lexer::Token::Number(1.0),
+            lexer::Token::Number(2.0),
+            lexer::Token::Number(3.0),
+            lexer::Token::RightBracket
+        );
+        scan!(
+            "(())",
+            lexer::Token::LeftParen,
+            lexer::Token::LeftParen,
+            lexer::Token::RightParen,
+            lexer::Token::RightParen
+        );
+        scan!(":=", lexer::Token::ColonEqual);
+        scanfails!("::", "Unexpected token");
+        scanfails!(":", "Unexpected end");
+        scan!(",", lexer::Token::Comma);
+        scan!("-", lexer::Token::Minus);
+        scan!("+", lexer::Token::Plus);
+        scan!("/", lexer::Token::Slash);
+        scan!("*", lexer::Token::Star);
+        scan!("not not", lexer::Token::Not, lexer::Token::Not);
+        scan!("<>", lexer::Token::NotEqual);
+        scan!("==", lexer::Token::EqualEqual);
+        scan!("<<", lexer::Token::Less, lexer::Token::Less);
+        scan!("<=", lexer::Token::LessEqual);
+        scan!(">>", lexer::Token::Greater, lexer::Token::Greater);
+        scan!(">=", lexer::Token::GreaterEqual);
+        scanfails!("'blah blah blah", "Unexpected end");
+        scan!(
+            "'blah blah blah'",
+            lexer::Token::Str("blah blah blah".to_string())
+        );
+        scan!("4", lexer::Token::Number(4.0));
+        scan!("42", lexer::Token::Number(42.0));
+        scan!("42 ", lexer::Token::Number(42.0));
+        scan!("4.2 ", lexer::Token::Number(4.2));
+        scan!(
+            "4+2",
+            lexer::Token::Number(4.0),
+            lexer::Token::Plus,
+            lexer::Token::Number(2.0)
+        );
+        scan!("4 2", lexer::Token::Number(4.0), lexer::Token::Number(2.0));
+        scan!(
+            "let y := x + 1",
+            lexer::Token::Let,
+            lexer::Token::Identifier("y".to_string()),
+            lexer::Token::ColonEqual,
+            lexer::Token::Identifier("x".to_string()),
+            lexer::Token::Plus,
+            lexer::Token::Number(1.0)
+        );
+        scan!(
+            "man and not mortal == false",
+            lexer::Token::Identifier("man".to_string()),
+            lexer::Token::And,
+            lexer::Token::Not,
+            lexer::Token::Identifier("mortal".to_string()),
+            lexer::Token::EqualEqual,
+            lexer::Token::False
+        );
+        scan!(
+            "fn x(arg)\n    return arg*2\nend",
+            lexer::Token::Function,
+            lexer::Token::Identifier("x".to_string()),
+            lexer::Token::LeftParen,
+            lexer::Token::Identifier("arg".to_string()),
+            lexer::Token::RightParen,
+            lexer::Token::Return,
+            lexer::Token::Identifier("arg".to_string()),
+            lexer::Token::Star,
+            lexer::Token::Number(2.0),
+            lexer::Token::End
+        );
+        scan!(
+            "if x then\n    1\nelsif y then\n    2\nelse\n    3\nend",
+            lexer::Token::If,
+            lexer::Token::Identifier("x".to_string()),
+            lexer::Token::Then,
+            lexer::Token::Number(1.0),
+            lexer::Token::Elsif,
+            lexer::Token::Identifier("y".to_string()),
+            lexer::Token::Then,
+            lexer::Token::Number(2.0),
+            lexer::Token::Else,
+            lexer::Token::Number(3.0),
+            lexer::Token::End
+        );
+        scan!(
+            "while true or false do\n    i := i + 1\n    break\nend",
+            lexer::Token::While,
+            lexer::Token::True,
+            lexer::Token::Or,
+            lexer::Token::False,
+            lexer::Token::Do,
+            lexer::Token::Identifier("i".to_string()),
+            lexer::Token::ColonEqual,
+            lexer::Token::Identifier("i".to_string()),
+            lexer::Token::Plus,
+            lexer::Token::Number(1.0),
+            lexer::Token::Break,
+            lexer::Token::End
+        );
+        scan!("continue", lexer::Token::Continue);
+        scan!(
+            "Ὦ := 'φῶς'",
+            lexer::Token::Identifier("Ὦ".to_string()),
+            lexer::Token::ColonEqual,
+            lexer::Token::Str("φῶς".to_string())
+        );
+        scan!(
+            "abd(def)",
+            lexer::Token::Identifier("abd".to_string()),
+            lexer::Token::LeftParen,
+            lexer::Token::Identifier("def".to_string()),
+            lexer::Token::RightParen
+        );
+        scan!(
+            "&$123",
+            lexer::Token::Identifier("&".to_string()),
+            lexer::Token::Identifier("$123".to_string())
+        );
     }
 }
