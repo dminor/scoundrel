@@ -52,6 +52,7 @@ macro_rules! maybe_apply_op {
             } else {
                 let mut err = "Type mismatch, expected ".to_string();
                 err.push_str($err);
+                err.push('.');
                 return Err(RuntimeError {
                     err: err,
                     line: $op.line,
@@ -105,7 +106,7 @@ fn binaryop(
                                     return Ok(Value::List(l));
                                 } else {
                                     return Err(RuntimeError {
-                                        err: "Type mismatch, expected list".to_string(),
+                                        err: "Type mismatch, expected list.".to_string(),
                                         line: op.line,
                                         pos: op.pos,
                                     });
@@ -117,7 +118,7 @@ fn binaryop(
                                     return Ok(Value::Str(x + &y));
                                 } else {
                                     return Err(RuntimeError {
-                                        err: "Type mismatch, expected string".to_string(),
+                                        err: "Type mismatch, expected string.".to_string(),
                                         line: op.line,
                                         pos: op.pos,
                                     });
@@ -165,6 +166,7 @@ fn binaryop(
                     }
                     let mut err = "Invalid arguments to ".to_string();
                     err.push_str(&op.token.to_string());
+                    err.push('.');
                     return Err(RuntimeError {
                         err: err,
                         line: op.line,
@@ -244,6 +246,31 @@ fn value(token: &lexer::LexedToken) -> Result<Value, RuntimeError> {
 pub fn eval(ast: &parser::Ast) -> Result<Value, RuntimeError> {
     match ast {
         parser::Ast::BinaryOp(op, lhs, rhs) => binaryop(op, lhs, rhs),
+        parser::Ast::If(conds, then) => {
+            for (cond, then) in conds.iter() {
+                match eval(cond) {
+                    Ok(v) => {
+                        if truthy(v) {
+                            match eval(then) {
+                                Ok(v) => return Ok(v),
+                                Err(e) => {
+                                    return Err(e);
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        return Err(e);
+                    }
+                }
+            }
+            match eval(then) {
+                Ok(v) => return Ok(v),
+                Err(e) => {
+                    return Err(e);
+                }
+            }
+        }
         parser::Ast::List(list) => {
             let mut result = LinkedList::<Value>::new();
             for item in list {
@@ -293,7 +320,7 @@ mod tests {
                 Ok(mut tokens) => match parser::parse(&mut tokens) {
                     Ok(ast) => match interpreter::eval(&ast) {
                         Ok(_) => assert!(false),
-                        Err(e) => assert!(e.err.starts_with($err)),
+                        Err(e) => assert_eq!(e.err, $err),
                     },
                     _ => assert!(false),
                 },
@@ -319,11 +346,15 @@ mod tests {
         eval!("false and undefined", Boolean, false);
         eval!("'a'=='a'", Boolean, true);
         eval!("'hello ' + 'world'", Str, "hello world");
-        evalfails!("2+true", "Type mismatch, expected number");
-        evalfails!("-true", "Type mismatch, expected number");
-        evalfails!("'a'+2", "Type mismatch, expected string");
-        evalfails!("true+true", "Invalid arguments to +");
-        evalfails!("[1]+2", "Type mismatch, expected list");
+        eval!("if 1 then 2 else 3 end", Number, 2.0);
+        eval!("if false then 1 elsif true then 2 else 3 end", Number, 2.0);
+        eval!("if false then 1 elsif false then 2 else 3 end", Number, 3.0);
+        eval!("if 1 then 2 else undefined end", Number, 2.0);
+        evalfails!("2+true", "Type mismatch, expected number.");
+        evalfails!("-true", "Type mismatch, expected number.");
+        evalfails!("'a'+2", "Type mismatch, expected string.");
+        evalfails!("true+true", "Invalid arguments to +.");
+        evalfails!("[1]+2", "Type mismatch, expected list.");
 
         match lexer::scan("[2 2>5 3*4]") {
             Ok(mut tokens) => {
