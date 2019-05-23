@@ -6,9 +6,10 @@ use std::error::Error;
 use std::fmt;
 
 #[derive(Clone)]
-pub enum Value {
+pub enum Value<'a> {
     Boolean(bool),
-    List(LinkedList<Value>),
+    Function(HashMap<String, Value<'a>>, Vec<String>, &'a parser::Ast),
+    List(LinkedList<Value<'a>>),
     Number(f64),
     Str(String),
 }
@@ -21,17 +22,18 @@ pub struct RuntimeError {
 }
 
 impl fmt::Display for RuntimeError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt<'a>(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "RuntimeError [Line {}]: {}", self.line, self.err)
     }
 }
 
 impl Error for RuntimeError {}
 
-impl fmt::Display for Value {
+impl<'a> fmt::Display for Value<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Value::Boolean(b) => write!(f, "{}", b),
+            Value::Function(_, _, _) => write!(f, "<lambda expression>"),
             Value::List(list) => {
                 write!(f, "[")?;
                 for item in list {
@@ -64,12 +66,12 @@ macro_rules! maybe_apply_op {
     );
 }
 
-fn binaryop(
-    env: &HashMap<String, Value>,
+fn binaryop<'a>(
+    env: &HashMap<String, Value<'a>>,
     op: &lexer::LexedToken,
-    lhs: &parser::Ast,
-    rhs: &parser::Ast,
-) -> Result<Value, RuntimeError> {
+    lhs: &'a parser::Ast,
+    rhs: &'a parser::Ast,
+) -> Result<Value<'a>, RuntimeError> {
     match eval(env, lhs) {
         Ok(lhs) => match &op.token {
             lexer::Token::And => {
@@ -185,6 +187,7 @@ fn binaryop(
 fn truthy(value: Value) -> bool {
     match value {
         Value::Boolean(b) => b,
+        Value::Function(_, _, _) => true,
         Value::List(list) => {
             if list.len() == 0 {
                 false
@@ -209,11 +212,11 @@ fn truthy(value: Value) -> bool {
     }
 }
 
-fn unaryop(
+fn unaryop<'a>(
     env: &HashMap<String, Value>,
     op: &lexer::LexedToken,
     value: &parser::Ast,
-) -> Result<Value, RuntimeError> {
+) -> Result<Value<'a>, RuntimeError> {
     match eval(env, value) {
         Ok(value) => match &op.token {
             lexer::Token::Not => Ok(Value::Boolean(!truthy(value))),
@@ -235,7 +238,10 @@ fn unaryop(
     }
 }
 
-fn value(env: &HashMap<String, Value>, token: &lexer::LexedToken) -> Result<Value, RuntimeError> {
+fn value<'a>(
+    env: &HashMap<String, Value<'a>>,
+    token: &lexer::LexedToken,
+) -> Result<Value<'a>, RuntimeError> {
     match &token.token {
         lexer::Token::False => Ok(Value::Boolean(false)),
         lexer::Token::True => Ok(Value::Boolean(true)),
@@ -262,33 +268,30 @@ fn value(env: &HashMap<String, Value>, token: &lexer::LexedToken) -> Result<Valu
     }
 }
 
-pub fn eval(env: &HashMap<String, Value>, ast: &parser::Ast) -> Result<Value, RuntimeError> {
+pub fn eval<'a>(
+    env: &HashMap<String, Value<'a>>,
+    ast: &'a parser::Ast,
+) -> Result<Value<'a>, RuntimeError> {
     match ast {
         parser::Ast::BinaryOp(op, lhs, rhs) => binaryop(env, op, lhs, rhs),
-        parser::Ast::If(conds, then) => {
-            for (cond, then) in conds.iter() {
-                match eval(env, cond) {
-                    Ok(v) => {
-                        if truthy(v) {
-                            match eval(env, then) {
-                                Ok(v) => return Ok(v),
-                                Err(e) => {
-                                    return Err(e);
-                                }
-                            }
-                        }
+        parser::Ast::Function(args, body) => {
+            let fn_env = env.clone();
+            let mut variables = Vec::<String>::new();
+            for arg in args {
+                match &arg.token {
+                    lexer::Token::Identifier(s) => {
+                        variables.push(s.to_string());
                     }
-                    Err(e) => {
-                        return Err(e);
+                    _ => {
+                        return Err(RuntimeError {
+                            err: "Expected identifier.".to_string(),
+                            line: arg.line,
+                            pos: arg.pos,
+                        });
                     }
                 }
             }
-            match eval(env, then) {
-                Ok(v) => return Ok(v),
-                Err(e) => {
-                    return Err(e);
-                }
-            }
+            Ok(Value::Function(fn_env, variables, body))
         }
         parser::Ast::Let(variables, expr) => {
             // TODO: maintaining a stack of environments would
@@ -326,6 +329,31 @@ pub fn eval(env: &HashMap<String, Value>, ast: &parser::Ast) -> Result<Value, Ru
                 }
             }
             Ok(Value::List(result))
+        }
+        parser::Ast::If(conds, then) => {
+            for (cond, then) in conds.iter() {
+                match eval(env, cond) {
+                    Ok(v) => {
+                        if truthy(v) {
+                            match eval(env, then) {
+                                Ok(v) => return Ok(v),
+                                Err(e) => {
+                                    return Err(e);
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        return Err(e);
+                    }
+                }
+            }
+            match eval(env, then) {
+                Ok(v) => return Ok(v),
+                Err(e) => {
+                    return Err(e);
+                }
+            }
         }
         parser::Ast::UnaryOp(op, v) => unaryop(env, op, v),
         parser::Ast::Value(t) => value(env, t),
@@ -404,6 +432,7 @@ mod tests {
             6.0
         );
         eval!("let x := true in x or undefined end", Boolean, true);
+        eval!("let x := fn (a) a*2 end in 2 end", Number, 2.0);
         evalfails!("2+true", "Type mismatch, expected number.");
         evalfails!("-true", "Type mismatch, expected number.");
         evalfails!("'a'+2", "Type mismatch, expected string.");

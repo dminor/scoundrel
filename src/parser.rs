@@ -4,8 +4,7 @@ use std::error::Error;
 use std::fmt;
 
 /*
-expression     -> variable
-variable       -> "let" ( IDENTIFIER ":=" expression )* in expression end
+expression     -> "let" ( IDENTIFIER ":=" expression )* in expression end
                   | conditional
 conditional    -> "if" equality "then" equality ("elsif" equality "then" equality)* ("else" equality)? "end"
                   | equality
@@ -16,10 +15,12 @@ multiplication -> unary ( ( "/" | "*" | "and" ) unary )*
 unary          -> ( "!" | "-" ) unary | value
 value          -> IDENTIFIER | NUMBER | STR | "false" | "true"
                   | "(" expression ")" | "[" ( expression )* "]"
+                  | "fn" "(" ( IDENTIFIER ,? ) * ")" in expression end
 */
 
 pub enum Ast {
     BinaryOp(lexer::LexedToken, Box<Ast>, Box<Ast>),
+    Function(Vec<lexer::LexedToken>, Box<Ast>),
     If(Vec<(Ast, Ast)>, Box<Ast>),
     Let(Vec<(lexer::LexedToken, Ast)>, Box<Ast>),
     List(Vec<Ast>),
@@ -67,10 +68,6 @@ macro_rules! expect {
 }
 
 fn expression(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError> {
-    variable(tokens)
-}
-
-fn variable(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError> {
     match tokens.front() {
         Some(peek) => match peek.token {
             lexer::Token::Let => {
@@ -381,6 +378,48 @@ fn value(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
     match tokens.pop_front() {
         Some(token) => match token.token {
             lexer::Token::False => Ok(Ast::Value(token)),
+            lexer::Token::Function => {
+                let mut variables = Vec::<lexer::LexedToken>::new();
+                expect!(tokens, LeftParen, "Expected (.".to_string());
+                loop {
+                    match tokens.pop_front() {
+                        Some(token) => match token.token {
+                            lexer::Token::Identifier(s) => {
+                                variables.push(lexer::LexedToken {
+                                    token: lexer::Token::Identifier(s),
+                                    line: token.line,
+                                    pos: token.pos,
+                                });
+                            }
+                            lexer::Token::Comma => {}
+                            lexer::Token::RightParen => {
+                                break;
+                            }
+                            _ => {
+                                return Err(ParserError {
+                                    err: "Expected identifier.".to_string(),
+                                    line: token.line,
+                                    pos: token.pos,
+                                });
+                            }
+                        },
+                        None => {
+                            return Err(ParserError {
+                                err: "Unexpected end of input.".to_string(),
+                                line: 0,
+                                pos: 0,
+                            });
+                        }
+                    }
+                }
+                match expression(tokens) {
+                    Ok(body) => {
+                        expect!(tokens, End, "Expected end.".to_string());
+                        return Ok(Ast::Function(variables, Box::new(body)));
+                    }
+                    Err(e) => Err(e),
+                }
+            }
             lexer::Token::Identifier(s) => Ok(Ast::Value(lexer::LexedToken {
                 token: lexer::Token::Identifier(s),
                 line: token.line,
@@ -889,6 +928,48 @@ mod tests {
                             match *expr {
                                 parser::Ast::Value(t) => {
                                     assert_eq!(t.token, lexer::Token::Identifier("x".to_string()));
+                                }
+                                _ => assert!(false),
+                            }
+                        }
+                        _ => assert!(false),
+                    },
+                    _ => assert!(false),
+                }
+            }
+            _ => assert!(false),
+        }
+
+        match lexer::scan("fn (x, y) x + y end") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 10);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match ast {
+                        parser::Ast::Function(args, body) => {
+                            assert_eq!(args.len(), 2);
+                            assert_eq!(args[0].token, lexer::Token::Identifier("x".to_string()));
+                            assert_eq!(args[1].token, lexer::Token::Identifier("y".to_string()));
+                            match *body {
+                                parser::Ast::BinaryOp(op, lhs, rhs) => {
+                                    assert_eq!(op.token, lexer::Token::Plus);
+                                    match *lhs {
+                                        parser::Ast::Value(t) => {
+                                            assert_eq!(
+                                                t.token,
+                                                lexer::Token::Identifier("x".to_string())
+                                            );
+                                        }
+                                        _ => assert!(false),
+                                    }
+                                    match *rhs {
+                                        parser::Ast::Value(t) => {
+                                            assert_eq!(
+                                                t.token,
+                                                lexer::Token::Identifier("y".to_string())
+                                            );
+                                        }
+                                        _ => assert!(false),
+                                    }
                                 }
                                 _ => assert!(false),
                             }
