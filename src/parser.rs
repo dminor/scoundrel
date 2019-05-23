@@ -4,7 +4,9 @@ use std::error::Error;
 use std::fmt;
 
 /*
-expression     -> conditional
+expression     -> variable
+variable       -> "let" ( IDENTIFIER ":=" expression )* in expression end
+                  | conditional
 conditional    -> "if" equality "then" equality ("elsif" equality "then" equality)* ("else" equality)? "end"
                   | equality
 equality       -> comparison ( ( "!=" | "==" ) comparison )*
@@ -12,13 +14,14 @@ comparison     -> addition ( ( ">" | ">=" | "<" | "<=" ) addition )*
 addition       -> multiplication ( ( "+" | "-" | "or" ) multiplication )*
 multiplication -> unary ( ( "/" | "*" | "and" ) unary )*
 unary          -> ( "!" | "-" ) unary | value
-value          -> NUMBER | STR | "false" | "true"
+value          -> IDENTIFIER | NUMBER | STR | "false" | "true"
                   | "(" expression ")" | "[" ( expression )* "]"
 */
 
 pub enum Ast {
     BinaryOp(lexer::LexedToken, Box<Ast>, Box<Ast>),
     If(Vec<(Ast, Ast)>, Box<Ast>),
+    Let(Vec<(lexer::LexedToken, Ast)>, Box<Ast>),
     List(Vec<Ast>),
     UnaryOp(lexer::LexedToken, Box<Ast>),
     Value(lexer::LexedToken),
@@ -38,10 +41,6 @@ impl fmt::Display for ParserError {
 }
 
 impl Error for ParserError {}
-
-fn expression(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError> {
-    conditional(tokens)
-}
 
 macro_rules! expect {
     ($tokens:expr, $token:tt, $err:expr) => {{
@@ -65,6 +64,75 @@ macro_rules! expect {
             }
         }
     };};
+}
+
+fn expression(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError> {
+    variable(tokens)
+}
+
+fn variable(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError> {
+    match tokens.front() {
+        Some(peek) => match peek.token {
+            lexer::Token::Let => {
+                tokens.pop_front();
+                let mut variables = Vec::<(lexer::LexedToken, Ast)>::new();
+                loop {
+                    match tokens.pop_front() {
+                        Some(token) => match token.token {
+                            lexer::Token::Identifier(s) => {
+                                let var = lexer::LexedToken {
+                                    token: lexer::Token::Identifier(s),
+                                    line: token.line,
+                                    pos: token.pos,
+                                };
+                                expect!(tokens, ColonEqual, "Expected :=.".to_string());
+                                match expression(tokens) {
+                                    Ok(value) => {
+                                        variables.push((var, value));
+                                    }
+                                    Err(e) => {
+                                        return Err(e);
+                                    }
+                                }
+                            }
+                            lexer::Token::In => {
+                                break;
+                            }
+                            _ => {
+                                return Err(ParserError {
+                                    err: "Expected identifier.".to_string(),
+                                    line: token.line,
+                                    pos: token.pos,
+                                });
+                            }
+                        },
+                        None => {
+                            return Err(ParserError {
+                                err: "Unexpected end of input.".to_string(),
+                                line: 0,
+                                pos: 0,
+                            });
+                        }
+                    }
+                }
+                match expression(tokens) {
+                    Ok(body) => {
+                        expect!(tokens, End, "Expected end.".to_string());
+                        return Ok(Ast::Let(variables, Box::new(body)));
+                    }
+                    Err(e) => Err(e),
+                }
+            }
+            _ => conditional(tokens),
+        },
+        None => {
+            return Err(ParserError {
+                err: "Unexpected end of input.".to_string(),
+                line: 0,
+                pos: 0,
+            });
+        }
+    }
 }
 
 fn conditional(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError> {
@@ -792,6 +860,35 @@ mod tests {
                             match *then {
                                 parser::Ast::Value(t) => {
                                     assert_eq!(t.token, lexer::Token::Number(3.0));
+                                }
+                                _ => assert!(false),
+                            }
+                        }
+                        _ => assert!(false),
+                    },
+                    _ => assert!(false),
+                }
+            }
+            _ => assert!(false),
+        }
+
+        match lexer::scan("let x := 1 in x end") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 7);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match ast {
+                        parser::Ast::Let(vars, expr) => {
+                            assert_eq!(vars.len(), 1);
+                            assert_eq!(vars[0].0.token, lexer::Token::Identifier("x".to_string()));
+                            match &vars[0].1 {
+                                parser::Ast::Value(t) => {
+                                    assert_eq!(t.token, lexer::Token::Number(1.0));
+                                }
+                                _ => assert!(false),
+                            }
+                            match *expr {
+                                parser::Ast::Value(t) => {
+                                    assert_eq!(t.token, lexer::Token::Identifier("x".to_string()));
                                 }
                                 _ => assert!(false),
                             }

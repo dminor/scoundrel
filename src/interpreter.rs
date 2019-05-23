@@ -1,5 +1,6 @@
 use crate::lexer;
 use crate::parser;
+use std::collections::HashMap;
 use std::collections::LinkedList;
 use std::error::Error;
 use std::fmt;
@@ -64,15 +65,16 @@ macro_rules! maybe_apply_op {
 }
 
 fn binaryop(
+    env: &HashMap<String, Value>,
     op: &lexer::LexedToken,
     lhs: &parser::Ast,
     rhs: &parser::Ast,
 ) -> Result<Value, RuntimeError> {
-    match eval(lhs) {
+    match eval(env, lhs) {
         Ok(lhs) => match &op.token {
             lexer::Token::And => {
                 if truthy(lhs) {
-                    match eval(rhs) {
+                    match eval(env, rhs) {
                         Ok(rhs) => {
                             return Ok(Value::Boolean(truthy(rhs)));
                         }
@@ -86,7 +88,7 @@ fn binaryop(
                 if truthy(lhs) {
                     return Ok(Value::Boolean(true));
                 } else {
-                    match eval(rhs) {
+                    match eval(env, rhs) {
                         Ok(rhs) => {
                             return Ok(Value::Boolean(truthy(rhs)));
                         }
@@ -94,7 +96,7 @@ fn binaryop(
                     }
                 }
             }
-            _ => match eval(rhs) {
+            _ => match eval(env, rhs) {
                 Ok(rhs) => {
                     match &op.token {
                         lexer::Token::Plus => {
@@ -207,8 +209,12 @@ fn truthy(value: Value) -> bool {
     }
 }
 
-fn unaryop(op: &lexer::LexedToken, value: &parser::Ast) -> Result<Value, RuntimeError> {
-    match eval(value) {
+fn unaryop(
+    env: &HashMap<String, Value>,
+    op: &lexer::LexedToken,
+    value: &parser::Ast,
+) -> Result<Value, RuntimeError> {
+    match eval(env, value) {
         Ok(value) => match &op.token {
             lexer::Token::Not => Ok(Value::Boolean(!truthy(value))),
             lexer::Token::Minus => match value {
@@ -229,12 +235,25 @@ fn unaryop(op: &lexer::LexedToken, value: &parser::Ast) -> Result<Value, Runtime
     }
 }
 
-fn value(token: &lexer::LexedToken) -> Result<Value, RuntimeError> {
+fn value(env: &HashMap<String, Value>, token: &lexer::LexedToken) -> Result<Value, RuntimeError> {
     match &token.token {
         lexer::Token::False => Ok(Value::Boolean(false)),
         lexer::Token::True => Ok(Value::Boolean(true)),
         lexer::Token::Number(n) => Ok(Value::Number(*n)),
         lexer::Token::Str(s) => Ok(Value::Str(s.to_string())),
+        lexer::Token::Identifier(s) => match env.get(s) {
+            Some(v) => Ok(v.clone()),
+            None => {
+                let mut err = "Undefined variable: ".to_string();
+                err.push_str(s);
+                err.push('.');
+                Err(RuntimeError {
+                    err: err,
+                    line: token.line,
+                    pos: token.pos,
+                })
+            }
+        },
         _ => Err(RuntimeError {
             err: "Internal error: token has no value.".to_string(),
             line: token.line,
@@ -243,15 +262,15 @@ fn value(token: &lexer::LexedToken) -> Result<Value, RuntimeError> {
     }
 }
 
-pub fn eval(ast: &parser::Ast) -> Result<Value, RuntimeError> {
+pub fn eval(env: &HashMap<String, Value>, ast: &parser::Ast) -> Result<Value, RuntimeError> {
     match ast {
-        parser::Ast::BinaryOp(op, lhs, rhs) => binaryop(op, lhs, rhs),
+        parser::Ast::BinaryOp(op, lhs, rhs) => binaryop(env, op, lhs, rhs),
         parser::Ast::If(conds, then) => {
             for (cond, then) in conds.iter() {
-                match eval(cond) {
+                match eval(env, cond) {
                     Ok(v) => {
                         if truthy(v) {
-                            match eval(then) {
+                            match eval(env, then) {
                                 Ok(v) => return Ok(v),
                                 Err(e) => {
                                     return Err(e);
@@ -264,17 +283,42 @@ pub fn eval(ast: &parser::Ast) -> Result<Value, RuntimeError> {
                     }
                 }
             }
-            match eval(then) {
+            match eval(env, then) {
                 Ok(v) => return Ok(v),
                 Err(e) => {
                     return Err(e);
                 }
             }
         }
+        parser::Ast::Let(variables, expr) => {
+            // TODO: maintaining a stack of environments would
+            // likely be more efficient than copying here.
+            let mut let_env = env.clone();
+            for (var, var_expr) in variables {
+                match &var.token {
+                    lexer::Token::Identifier(s) => match eval(&let_env, var_expr) {
+                        Ok(v) => {
+                            let_env.insert(s.to_string(), v);
+                        }
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    },
+                    _ => {
+                        return Err(RuntimeError {
+                            err: "Expected identifier.".to_string(),
+                            line: var.line,
+                            pos: var.pos,
+                        });
+                    }
+                }
+            }
+            eval(&let_env, expr)
+        }
         parser::Ast::List(list) => {
             let mut result = LinkedList::<Value>::new();
             for item in list {
-                match eval(item) {
+                match eval(env, item) {
                     Ok(v) => result.push_back(v),
                     Err(e) => {
                         return Err(e);
@@ -283,22 +327,25 @@ pub fn eval(ast: &parser::Ast) -> Result<Value, RuntimeError> {
             }
             Ok(Value::List(result))
         }
-        parser::Ast::UnaryOp(op, v) => unaryop(op, v),
-        parser::Ast::Value(t) => value(t),
+        parser::Ast::UnaryOp(op, v) => unaryop(env, op, v),
+        parser::Ast::Value(t) => value(env, t),
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use crate::interpreter;
     use crate::lexer;
     use crate::parser;
 
     macro_rules! eval {
         ($input:expr, $type:tt, $value:expr) => {{
+            let env = HashMap::new();
             match lexer::scan($input) {
                 Ok(mut tokens) => match parser::parse(&mut tokens) {
-                    Ok(ast) => match interpreter::eval(&ast) {
+                    Ok(ast) => match interpreter::eval(&env, &ast) {
                         Ok(v) => match v {
                             interpreter::Value::$type(t) => {
                                 assert_eq!(t, $value);
@@ -316,9 +363,10 @@ mod tests {
 
     macro_rules! evalfails {
         ($input:expr, $err:tt) => {{
+            let env = HashMap::new();
             match lexer::scan($input) {
                 Ok(mut tokens) => match parser::parse(&mut tokens) {
-                    Ok(ast) => match interpreter::eval(&ast) {
+                    Ok(ast) => match interpreter::eval(&env, &ast) {
                         Ok(_) => assert!(false),
                         Err(e) => assert_eq!(e.err, $err),
                     },
@@ -350,17 +398,25 @@ mod tests {
         eval!("if false then 1 elsif true then 2 else 3 end", Number, 2.0);
         eval!("if false then 1 elsif false then 2 else 3 end", Number, 3.0);
         eval!("if 1 then 2 else undefined end", Number, 2.0);
+        eval!(
+            "let x := 1 y := x + 1 z := x + 2 in x + y + z end",
+            Number,
+            6.0
+        );
+        eval!("let x := true in x or undefined end", Boolean, true);
         evalfails!("2+true", "Type mismatch, expected number.");
         evalfails!("-true", "Type mismatch, expected number.");
         evalfails!("'a'+2", "Type mismatch, expected string.");
         evalfails!("true+true", "Invalid arguments to +.");
         evalfails!("[1]+2", "Type mismatch, expected list.");
+        evalfails!("z", "Undefined variable: z.");
 
         match lexer::scan("[2 2>5 3*4]") {
             Ok(mut tokens) => {
                 assert_eq!(tokens.len(), 9);
+                let env = HashMap::new();
                 match parser::parse(&mut tokens) {
-                    Ok(ast) => match interpreter::eval(&ast) {
+                    Ok(ast) => match interpreter::eval(&env, &ast) {
                         Ok(v) => match v {
                             interpreter::Value::List(mut list) => {
                                 match list.pop_front() {
@@ -395,8 +451,9 @@ mod tests {
         match lexer::scan("[1] + [2 3] + [4 5 6]") {
             Ok(mut tokens) => {
                 assert_eq!(tokens.len(), 14);
+                let env = HashMap::new();
                 match parser::parse(&mut tokens) {
-                    Ok(ast) => match interpreter::eval(&ast) {
+                    Ok(ast) => match interpreter::eval(&env, &ast) {
                         Ok(v) => match v {
                             interpreter::Value::List(list) => {
                                 let mut expected = 1.0;

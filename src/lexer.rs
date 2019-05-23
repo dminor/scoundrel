@@ -38,6 +38,7 @@ pub enum Token {
     False,
     Function,
     If,
+    In,
     Let,
     Or,
     Return,
@@ -78,6 +79,7 @@ impl fmt::Display for Token {
             Token::False => write!(f, "false"),
             Token::Function => write!(f, "fn"),
             Token::If => write!(f, "if"),
+            Token::In => write!(f, "in"),
             Token::Let => write!(f, "let"),
             Token::Not => write!(f, "not"),
             Token::Or => write!(f, "or"),
@@ -308,6 +310,9 @@ pub fn scan(src: &str) -> Result<LinkedList<LexedToken>, LexerError> {
                         "if" => {
                             push_token!(Token::If, tokens, line, pos);
                         }
+                        "in" => {
+                            push_token!(Token::In, tokens, line, pos);
+                        }
                         "let" => {
                             push_token!(Token::Let, tokens, line, pos);
                         }
@@ -438,13 +443,18 @@ mod tests {
         );
         scan!("4 2", lexer::Token::Number(4.0), lexer::Token::Number(2.0));
         scan!(
-            "let y := x + 1",
+            "let y := x + 1 in 2 * y end",
             lexer::Token::Let,
             lexer::Token::Identifier("y".to_string()),
             lexer::Token::ColonEqual,
             lexer::Token::Identifier("x".to_string()),
             lexer::Token::Plus,
-            lexer::Token::Number(1.0)
+            lexer::Token::Number(1.0),
+            lexer::Token::In,
+            lexer::Token::Number(2.0),
+            lexer::Token::Star,
+            lexer::Token::Identifier("y".to_string()),
+            lexer::Token::End
         );
         scan!(
             "man and not mortal == false",

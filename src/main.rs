@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 mod interpreter;
 mod lexer;
 mod parser;
@@ -11,11 +13,12 @@ fn main() -> io::Result<()> {
     print!("> ");
     stdout.flush()?;
 
+    let env = HashMap::new();
     for line in stdin.lock().lines() {
         match line {
             Ok(s) => match lexer::scan(&s) {
                 Ok(mut tokens) => match parser::parse(&mut tokens) {
-                    Ok(ast) => match interpreter::eval(&ast) {
+                    Ok(ast) => match interpreter::eval(&env, &ast) {
                         Ok(v) => {
                             println!("{}", v);
                         }
