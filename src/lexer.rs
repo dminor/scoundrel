@@ -143,15 +143,13 @@ pub fn scan(src: &str) -> Result<LinkedList<LexedToken>, LexerError> {
                             loop {
                                 match chars.next() {
                                     Some((_, c)) => match c {
-                                        '*' => {
-                                            match chars.peek() {
-                                                Some((_, ')')) => {
-                                                    chars.next();
-                                                    break;
-                                                }
-                                                _ => {}
+                                        '*' => match chars.peek() {
+                                            Some((_, ')')) => {
+                                                chars.next();
+                                                break;
                                             }
-                                        }
+                                            _ => {}
+                                        },
                                         '\n' => {
                                             line += 1;
                                         }
@@ -159,7 +157,8 @@ pub fn scan(src: &str) -> Result<LinkedList<LexedToken>, LexerError> {
                                     },
                                     None => {
                                         return Err(LexerError {
-                                            err: "Unexpected end of input while lexing comment".to_string(),
+                                            err: "Unexpected end of input while lexing comment"
+                                                .to_string(),
                                             line: line,
                                             pos: pos,
                                         });
@@ -173,7 +172,7 @@ pub fn scan(src: &str) -> Result<LinkedList<LexedToken>, LexerError> {
                     None => {
                         push_token!(Token::LeftParen, tokens, line, pos);
                     }
-                }
+                },
                 ')' => {
                     push_token!(Token::RightParen, tokens, line, pos);
                 }
