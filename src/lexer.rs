@@ -137,8 +137,42 @@ pub fn scan(src: &str) -> Result<LinkedList<LexedToken>, LexerError> {
                 ']' => {
                     push_token!(Token::RightBracket, tokens, line, pos);
                 }
-                '(' => {
-                    push_token!(Token::LeftParen, tokens, line, pos);
+                '(' => match chars.peek() {
+                    Some((_, c)) => {
+                        if *c == '*' {
+                            loop {
+                                match chars.next() {
+                                    Some((_, c)) => match c {
+                                        '*' => {
+                                            match chars.peek() {
+                                                Some((_, ')')) => {
+                                                    chars.next();
+                                                    break;
+                                                }
+                                                _ => {}
+                                            }
+                                        }
+                                        '\n' => {
+                                            line += 1;
+                                        }
+                                        _ => {}
+                                    },
+                                    None => {
+                                        return Err(LexerError {
+                                            err: "Unexpected end of input while lexing comment".to_string(),
+                                            line: line,
+                                            pos: pos,
+                                        });
+                                    }
+                                }
+                            }
+                        } else {
+                            push_token!(Token::LeftParen, tokens, line, pos);
+                        }
+                    }
+                    None => {
+                        push_token!(Token::LeftParen, tokens, line, pos);
+                    }
                 }
                 ')' => {
                     push_token!(Token::RightParen, tokens, line, pos);
@@ -525,6 +559,10 @@ mod tests {
             "&$123",
             lexer::Token::Identifier("&".to_string()),
             lexer::Token::Identifier("$123".to_string())
+        );
+        scan!(
+            "(* this is\na comment (* )\n*) 42",
+            lexer::Token::Number(42.0)
         );
     }
 }
