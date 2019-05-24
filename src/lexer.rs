@@ -40,6 +40,7 @@ pub enum Token {
     If,
     In,
     Let,
+    Mod,
     Or,
     Return,
     Then,
@@ -81,6 +82,7 @@ impl fmt::Display for Token {
             Token::If => write!(f, "if"),
             Token::In => write!(f, "in"),
             Token::Let => write!(f, "let"),
+            Token::Mod => write!(f, "mod"),
             Token::Not => write!(f, "not"),
             Token::Or => write!(f, "or"),
             Token::Return => write!(f, "return"),
@@ -349,6 +351,9 @@ pub fn scan(src: &str) -> Result<LinkedList<LexedToken>, LexerError> {
                         "let" => {
                             push_token!(Token::Let, tokens, line, pos);
                         }
+                        "mod" => {
+                            push_token!(Token::Mod, tokens, line, pos);
+                        }
                         "not" => {
                             push_token!(Token::Not, tokens, line, pos);
                         }
@@ -562,6 +567,12 @@ mod tests {
         scan!(
             "(* this is\na comment (* )\n*) 42",
             lexer::Token::Number(42.0)
+        );
+        scan!(
+            "23 mod 4",
+            lexer::Token::Number(23.0),
+            lexer::Token::Mod,
+            lexer::Token::Number(4.0)
         );
     }
 }

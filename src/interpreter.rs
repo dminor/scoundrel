@@ -138,6 +138,9 @@ fn binaryop<'a>(
                         lexer::Token::Slash => {
                             maybe_apply_op!(Number, Number, result, lhs, rhs, /, "number", op);
                         }
+                        lexer::Token::Mod => {
+                            maybe_apply_op!(Number, Number, result, lhs, rhs, %, "number", op);
+                        }
                         lexer::Token::EqualEqual => {
                             maybe_apply_op!(Boolean, Boolean, result, lhs, rhs, ==, "boolean", op);
                             maybe_apply_op!(Number, Boolean, result, lhs, rhs, ==, "number", op);
@@ -450,6 +453,9 @@ mod tests {
         eval!("not true", Boolean, false);
         eval!("2+2", Number, 4.0);
         eval!("2.2+2*5", Number, 12.2);
+        eval!("24 mod 5", Number, 4.0);
+        eval!("27.5 mod 4", Number, 3.5);
+        eval!("5 mod -3", Number, 2.0);
         eval!("2+2<=5", Boolean, true);
         eval!("2+2>5", Boolean, false);
         eval!("2<>5", Boolean, true);
