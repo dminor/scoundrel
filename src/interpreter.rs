@@ -313,7 +313,7 @@ pub fn eval<'a>(
                     }
 
                     for i in 0..variables.len() {
-                        match eval(&call_env, &args[i]) {
+                        match eval(&env, &args[i]) {
                             Ok(v) => {
                                 call_env.insert(variables[i].clone(), v);
                             }
@@ -552,5 +552,25 @@ mod tests {
             }
             _ => assert!(false),
         }
+
+        eval!(
+            "
+            let f := fn (n, sum)
+                    if n == 10 then
+                        sum
+                    else
+                        if (n mod 3 == 0) or (n mod 5 == 0) then
+                            f(n + 1, sum + n)
+                        else
+                            f(n + 1, sum)
+                        end
+                    end
+                end
+            in
+                f(1, 0)
+            end",
+            Number,
+            23.0
+        );
     }
 }
