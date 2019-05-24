@@ -293,6 +293,44 @@ pub fn eval<'a>(
             }
             Ok(Value::Function(fn_env, variables, body))
         }
+        parser::Ast::FunctionCall(function, args) => {
+            match eval(&env, function) {
+                Ok(Value::Function(fn_env, variables, body)) => {
+                    let mut call_env = env.clone();
+                    for kv in fn_env.iter() {
+                        call_env.insert(kv.0.to_string(), kv.1.clone());
+                    }
+
+                    if variables.len() != args.len() {
+                        return Err(RuntimeError {
+                            err: "Incorrect number of arguments to function call".to_string(),
+                            line: 0, //TODO
+                            pos: 0,
+                        });
+                    }
+
+                    for i in 0..variables.len() {
+                        match eval(&call_env, &args[i]) {
+                            Ok(v) => {
+                                call_env.insert(variables[i].clone(), v);
+                            }
+                            Err(e) => {
+                                return Err(e);
+                            }
+                        }
+                    }
+                    eval(&call_env, body)
+                }
+                Err(e) => Err(e),
+                _ => {
+                    return Err(RuntimeError {
+                        err: "Attempt to call non-function.".to_string(),
+                        line: 0, //TODO
+                        pos: 0,
+                    });
+                }
+            }
+        }
         parser::Ast::Let(variables, expr) => {
             // TODO: maintaining a stack of environments would
             // likely be more efficient than copying here.
@@ -432,7 +470,10 @@ mod tests {
             6.0
         );
         eval!("let x := true in x or undefined end", Boolean, true);
-        eval!("let x := fn (a) a*2 end in 2 end", Number, 2.0);
+        eval!("let f := fn (a) a*2 end in 2 end", Number, 2.0);
+        eval!("fn () 1 end ()", Number, 1.0);
+        eval!("fn (x, y) x + y end (2, 3)", Number, 5.0);
+        eval!("let f := fn (a) a*2 end in f(2) end", Number, 4.0);
         evalfails!("2+true", "Type mismatch, expected number.");
         evalfails!("-true", "Type mismatch, expected number.");
         evalfails!("'a'+2", "Type mismatch, expected string.");

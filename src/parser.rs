@@ -12,7 +12,8 @@ equality       -> comparison ( ( "!=" | "==" ) comparison )*
 comparison     -> addition ( ( ">" | ">=" | "<" | "<=" ) addition )*
 addition       -> multiplication ( ( "+" | "-" | "or" ) multiplication )*
 multiplication -> unary ( ( "/" | "*" | "and" ) unary )*
-unary          -> ( "!" | "-" ) unary | value
+unary          -> ( "!" | "-" ) unary | call
+call           -> value ( "(" ( value ,? )* ")" )?
 value          -> IDENTIFIER | NUMBER | STR | "false" | "true"
                   | "(" expression ")" | "[" ( expression )* "]"
                   | "fn" "(" ( IDENTIFIER ,? ) * ")" in expression end
@@ -21,6 +22,7 @@ value          -> IDENTIFIER | NUMBER | STR | "false" | "true"
 pub enum Ast {
     BinaryOp(lexer::LexedToken, Box<Ast>, Box<Ast>),
     Function(Vec<lexer::LexedToken>, Box<Ast>),
+    FunctionCall(Box<Ast>, Vec<Ast>),
     If(Vec<(Ast, Ast)>, Box<Ast>),
     Let(Vec<(lexer::LexedToken, Ast)>, Box<Ast>),
     List(Vec<Ast>),
@@ -348,7 +350,7 @@ fn unary(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
             match peek.token {
                 lexer::Token::Minus | lexer::Token::Not => {
                     if let Some(token) = tokens.pop_front() {
-                        match value(tokens) {
+                        match call(tokens) {
                             Ok(n) => Ok(Ast::UnaryOp(token, Box::new(n))),
                             Err(e) => Err(e),
                         }
@@ -361,7 +363,7 @@ fn unary(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
                         });
                     }
                 }
-                _ => value(tokens),
+                _ => call(tokens),
             }
         }
         None => {
@@ -371,6 +373,50 @@ fn unary(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
                 pos: 0,
             });
         }
+    }
+}
+
+fn call(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError> {
+    let v = value(tokens);
+
+    match v {
+        Ok(ast) => match tokens.front() {
+            Some(peek) => match peek.token {
+                lexer::Token::LeftParen => {
+                    tokens.pop_front();
+                    let mut args = Vec::<Ast>::new();
+                    loop {
+                        match tokens.front() {
+                            Some(peek) => match peek.token {
+                                lexer::Token::Comma => {
+                                    tokens.pop_front();
+                                }
+                                lexer::Token::RightParen => {
+                                    tokens.pop_front();
+                                    break;
+                                }
+                                _ => {}
+                            },
+                            None => {
+                                return Err(ParserError {
+                                    err: "Unexpected end of input in function call.".to_string(),
+                                    line: 0,
+                                    pos: 0,
+                                });
+                            }
+                        }
+                        match expression(tokens) {
+                            Ok(ast) => args.push(ast),
+                            Err(err) => return Err(err),
+                        }
+                    }
+                    Ok(Ast::FunctionCall(Box::new(ast), args))
+                }
+                _ => Ok(ast),
+            },
+            None => Ok(ast),
+        },
+        Err(e) => Err(e),
     }
 }
 
@@ -477,11 +523,16 @@ fn value(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
                 },
                 Err(e) => Err(e),
             },
-            _ => Err(ParserError {
-                err: "Expected value.".to_string(),
-                line: token.line,
-                pos: token.pos,
-            }),
+            _ => {
+                let mut err = "Expected value, found ".to_string();
+                err.push_str(&token.token.to_string());
+                err.push('.');
+                Err(ParserError {
+                    err: err,
+                    line: token.line,
+                    pos: token.pos,
+                })
+            }
         },
         None => {
             return Err(ParserError {
@@ -970,6 +1021,71 @@ mod tests {
                                         }
                                         _ => assert!(false),
                                     }
+                                }
+                                _ => assert!(false),
+                            }
+                        }
+                        _ => assert!(false),
+                    },
+                    _ => assert!(false),
+                }
+            }
+            _ => assert!(false),
+        }
+        match lexer::scan("fn (x, y) x + y end (2, 3)") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 15);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match ast {
+                        parser::Ast::FunctionCall(func, args) => {
+                            match *func {
+                                parser::Ast::Function(args, body) => {
+                                    assert_eq!(args.len(), 2);
+                                    assert_eq!(
+                                        args[0].token,
+                                        lexer::Token::Identifier("x".to_string())
+                                    );
+                                    assert_eq!(
+                                        args[1].token,
+                                        lexer::Token::Identifier("y".to_string())
+                                    );
+                                    match *body {
+                                        parser::Ast::BinaryOp(op, lhs, rhs) => {
+                                            assert_eq!(op.token, lexer::Token::Plus);
+                                            match *lhs {
+                                                parser::Ast::Value(t) => {
+                                                    assert_eq!(
+                                                        t.token,
+                                                        lexer::Token::Identifier("x".to_string())
+                                                    );
+                                                }
+                                                _ => assert!(false),
+                                            }
+                                            match *rhs {
+                                                parser::Ast::Value(t) => {
+                                                    assert_eq!(
+                                                        t.token,
+                                                        lexer::Token::Identifier("y".to_string())
+                                                    );
+                                                }
+                                                _ => assert!(false),
+                                            }
+                                        }
+                                        _ => assert!(false),
+                                    }
+                                }
+                                _ => assert!(false),
+                            }
+                            assert_eq!(args.len(), 2);
+                            match &args[0] {
+                                parser::Ast::Value(t) => {
+                                    assert_eq!(t.token, lexer::Token::Number(2.0));
+                                }
+                                _ => assert!(false),
+                            }
+                            match &args[1] {
+                                parser::Ast::Value(t) => {
+                                    assert_eq!(t.token, lexer::Token::Number(3.0));
                                 }
                                 _ => assert!(false),
                             }
