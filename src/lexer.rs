@@ -39,6 +39,7 @@ pub enum Token {
     Let,
     Mod,
     Or,
+    Recur,
     Then,
     True,
 }
@@ -77,6 +78,7 @@ impl fmt::Display for Token {
             Token::Mod => write!(f, "mod"),
             Token::Not => write!(f, "not"),
             Token::Or => write!(f, "or"),
+            Token::Recur => write!(f, "$"),
             Token::Then => write!(f, "then"),
             Token::True => write!(f, "true"),
         }
@@ -341,6 +343,9 @@ pub fn scan(src: &str) -> Result<LinkedList<LexedToken>, LexerError> {
                         "or" => {
                             push_token!(Token::Or, tokens, line, pos);
                         }
+                        "$" => {
+                            push_token!(Token::Recur, tokens, line, pos);
+                        }
                         "then" => {
                             push_token!(Token::Then, tokens, line, pos);
                         }
@@ -531,6 +536,14 @@ mod tests {
             lexer::Token::Number(23.0),
             lexer::Token::Mod,
             lexer::Token::Number(4.0)
+        );
+        scan!(
+            "$(1 2)",
+            lexer::Token::Recur,
+            lexer::Token::LeftParen,
+            lexer::Token::Number(1.0),
+            lexer::Token::Number(2.0),
+            lexer::Token::RightParen
         );
     }
 }

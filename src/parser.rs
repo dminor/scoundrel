@@ -17,6 +17,7 @@ call           -> value ( "(" ( value ,? )* ")" )?
 value          -> IDENTIFIER | NUMBER | STR | "false" | "true"
                   | "(" expression ")" | "[" ( expression )* "]"
                   | "fn" "(" ( IDENTIFIER ,? ) * ")" in expression end
+                  | "$" ( "(" ( value ,? )* ")" )?
 */
 
 pub enum Ast {
@@ -26,6 +27,7 @@ pub enum Ast {
     If(Vec<(Ast, Ast)>, Box<Ast>),
     Let(Vec<(lexer::LexedToken, Ast)>, Box<Ast>),
     List(Vec<Ast>),
+    Recur(Vec<Ast>),
     UnaryOp(lexer::LexedToken, Box<Ast>),
     Value(lexer::LexedToken),
 }
@@ -526,6 +528,31 @@ fn value(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
                 },
                 Err(e) => Err(e),
             },
+            lexer::Token::Recur => {
+                let mut items = Vec::<Ast>::new();
+                expect!(tokens, LeftParen, "Expected (.".to_string());
+                loop {
+                    match tokens.front() {
+                        Some(peek) => {
+                            if let lexer::Token::RightParen = peek.token {
+                                tokens.pop_front();
+                                break;
+                            }
+                            if let Ok(item) = expression(tokens) {
+                                items.push(item);
+                            }
+                        }
+                        None => {
+                            return Err(ParserError {
+                                err: "Unexpected end of input when looking for ).".to_string(),
+                                line: token.line,
+                                pos: token.pos,
+                            });
+                        }
+                    }
+                }
+                Ok(Ast::Recur(items))
+            }
             _ => {
                 let mut err = "Expected value, found ".to_string();
                 err.push_str(&token.token.to_string());
@@ -1035,6 +1062,7 @@ mod tests {
             }
             _ => assert!(false),
         }
+
         match lexer::scan("fn (x, y) x + y end (2, 3)") {
             Ok(mut tokens) => {
                 assert_eq!(tokens.len(), 15);
@@ -1079,6 +1107,34 @@ mod tests {
                                 }
                                 _ => assert!(false),
                             }
+                            assert_eq!(args.len(), 2);
+                            match &args[0] {
+                                parser::Ast::Value(t) => {
+                                    assert_eq!(t.token, lexer::Token::Number(2.0));
+                                }
+                                _ => assert!(false),
+                            }
+                            match &args[1] {
+                                parser::Ast::Value(t) => {
+                                    assert_eq!(t.token, lexer::Token::Number(3.0));
+                                }
+                                _ => assert!(false),
+                            }
+                        }
+                        _ => assert!(false),
+                    },
+                    _ => assert!(false),
+                }
+            }
+            _ => assert!(false),
+        }
+
+        match lexer::scan("$(2, 3)") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 6);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match ast {
+                        parser::Ast::Recur(args) => {
                             assert_eq!(args.len(), 2);
                             match &args[0] {
                                 parser::Ast::Value(t) => {

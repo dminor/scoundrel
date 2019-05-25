@@ -11,6 +11,7 @@ pub enum Value<'a> {
     Function(HashMap<String, Value<'a>>, Vec<String>, &'a parser::Ast),
     List(LinkedList<Value<'a>>),
     Number(f64),
+    Recur(Vec<Value<'a>>),
     Str(String),
 }
 
@@ -33,7 +34,7 @@ impl<'a> fmt::Display for Value<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Value::Boolean(b) => write!(f, "{}", b),
-            Value::Function(_, _, _) => write!(f, "<lambda expression>"),
+            Value::Function(_, _, _) => write!(f, "<lambda>"),
             Value::List(list) => {
                 write!(f, "[")?;
                 for item in list {
@@ -42,6 +43,7 @@ impl<'a> fmt::Display for Value<'a> {
                 write!(f, " ]")
             }
             Value::Number(n) => write!(f, "{}", n),
+            Value::Recur(_) => write!(f, "<recur>"),
             Value::Str(s) => write!(f, "{}", s),
         }
     }
@@ -205,6 +207,7 @@ fn truthy(value: Value) -> bool {
                 true
             }
         }
+        Value::Recur(_) => false,
         Value::Str(s) => {
             if s.len() == 0 {
                 false
@@ -322,7 +325,25 @@ pub fn eval<'a>(
                             }
                         }
                     }
-                    eval(&call_env, body)
+                    loop {
+                        let result = eval(&call_env, body);
+                        match result {
+                            Ok(Value::Recur(args)) => {
+                                if variables.len() != args.len() {
+                                    return Err(RuntimeError {
+                                        err: "Incorrect number of arguments in recur".to_string(),
+                                        line: 0, //TODO
+                                        pos: 0,
+                                    });
+                                }
+
+                                for i in 0..variables.len() {
+                                    call_env.insert(variables[i].clone(), args[i].clone());
+                                }
+                            }
+                            _ => return result,
+                        }
+                    }
                 }
                 Err(e) => Err(e),
                 _ => {
@@ -395,6 +416,18 @@ pub fn eval<'a>(
                     return Err(e);
                 }
             }
+        }
+        parser::Ast::Recur(args) => {
+            let mut result = Vec::<Value>::new();
+            for arg in args {
+                match eval(env, arg) {
+                    Ok(v) => result.push(v),
+                    Err(e) => {
+                        return Err(e);
+                    }
+                }
+            }
+            Ok(Value::Recur(result))
         }
         parser::Ast::UnaryOp(op, v) => unaryop(env, op, v),
         parser::Ast::Value(t) => value(env, t),
@@ -556,13 +589,13 @@ mod tests {
         eval!(
             "
             let f := fn (n, sum)
-                    if n == 10 then
+                    if n == 1000 then
                         sum
                     else
                         if (n mod 3 == 0) or (n mod 5 == 0) then
-                            f(n + 1, sum + n)
+                            $(n + 1, sum + n)
                         else
-                            f(n + 1, sum)
+                            $(n + 1, sum)
                         end
                     end
                 end
@@ -570,7 +603,7 @@ mod tests {
                 f(1, 0)
             end",
             Number,
-            23.0
+            233168.0
         );
     }
 }
