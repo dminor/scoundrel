@@ -14,6 +14,7 @@ pub enum Token {
     Plus,
     Slash,
     Star,
+    Divides,
     Not,
     NotEqual,
     EqualEqual,
@@ -57,6 +58,7 @@ impl fmt::Display for Token {
             Token::Plus => write!(f, "+"),
             Token::Slash => write!(f, "/"),
             Token::Star => write!(f, "*"),
+            Token::Divides => write!(f, "|"),
             Token::NotEqual => write!(f, "<>"),
             Token::EqualEqual => write!(f, "=="),
             Token::Greater => write!(f, ">"),
@@ -198,6 +200,9 @@ pub fn scan(src: &str) -> Result<LinkedList<LexedToken>, LexerError> {
                 }
                 '*' => {
                     push_token!(Token::Star, tokens, line);
+                }
+                '|' => {
+                    push_token!(Token::Divides, tokens, line);
                 }
                 '=' => match chars.peek() {
                     Some(c) => {
@@ -427,6 +432,7 @@ mod tests {
         scan!("+", lexer::Token::Plus);
         scan!("/", lexer::Token::Slash);
         scan!("*", lexer::Token::Star);
+        scan!("|", lexer::Token::Divides);
         scan!("not not", lexer::Token::Not, lexer::Token::Not);
         scan!("<>", lexer::Token::NotEqual);
         scan!("==", lexer::Token::EqualEqual);

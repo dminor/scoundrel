@@ -68,8 +68,9 @@ list concatenation.
 
 Numbers are 64 floating point. The usual arithmetic and comparison operators
 are supported: `+`, `-`, `*`, `/`, `mod`, '<', '<=', '==', '<>', '>', and '>='.
-The number zero is false in boolean expressions, other numbers are considered
-true.
+The `|` operator returns true if the first value evenly divides the second,
+false otherwise, e.g. `a | b` is true if `b % a == 0`. The number zero is false
+in boolean expressions, other numbers are considered true.
 
 ```
 2 + 3 / 4 * 5 mod 6

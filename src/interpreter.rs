@@ -138,6 +138,19 @@ fn binaryop<'a>(
                         lexer::Token::Slash => {
                             maybe_apply_op!(Number, Number, result, lhs, rhs, /, "number", op);
                         }
+                        lexer::Token::Divides => {
+                            if let Value::Number(x) = lhs {
+                                if let Value::Number(y) = rhs {
+                                    return Ok(Value::Boolean(y % x == 0.0));
+                                } else {
+                                    let err = "Type mismatch, expected number".to_string();
+                                    return Err(RuntimeError {
+                                        err: err,
+                                        line: op.line,
+                                    });
+                                }
+                            }
+                        }
                         lexer::Token::Mod => {
                             maybe_apply_op!(Number, Number, result, lhs, rhs, %, "number", op);
                         }
@@ -498,6 +511,8 @@ mod tests {
         eval!("not true", Boolean, false);
         eval!("2+2", Number, 4.0);
         eval!("2.2+2*5", Number, 12.2);
+        eval!("3 | 6", Boolean, true);
+        eval!("3 | 7", Boolean, false);
         eval!("24 mod 5", Number, 4.0);
         eval!("27.5 mod 4", Number, 3.5);
         eval!("5 mod -3", Number, 2.0);

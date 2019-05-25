@@ -11,7 +11,7 @@ conditional    -> "if" equality "then" equality ("elsif" equality "then" equalit
 equality       -> comparison ( ( "!=" | "==" ) comparison )*
 comparison     -> addition ( ( ">" | ">=" | "<" | "<=" ) addition )*
 addition       -> multiplication ( ( "+" | "-" | "or" ) multiplication )*
-multiplication -> unary ( ( "/" | "*" | "mod" | "and" ) unary )*
+multiplication -> unary ( ( "/" | "*" | "|" | "mod" | "and" ) unary )*
 unary          -> ( "!" | "-" ) unary | call
 call           -> value ( "(" ( value ,? )* ")" )?
 value          -> IDENTIFIER | NUMBER | STR | "false" | "true"
@@ -312,6 +312,7 @@ fn multiplication(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, Par
                     Some(peek) => match peek.token {
                         lexer::Token::Slash
                         | lexer::Token::Star
+                        | lexer::Token::Divides
                         | lexer::Token::Mod
                         | lexer::Token::And => {
                             if let Some(token) = tokens.pop_front() {
@@ -764,6 +765,15 @@ mod tests {
             lexer::Token::Or,
             lexer::Token::True,
             lexer::Token::False
+        );
+
+        parse!(
+            "3 | 5",
+            3,
+            parser::Ast::BinaryOp,
+            lexer::Token::Divides,
+            lexer::Token::Number(3.0),
+            lexer::Token::Number(5.0)
         );
 
         match lexer::scan("x and y or false") {
