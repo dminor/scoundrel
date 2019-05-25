@@ -93,7 +93,7 @@ pub struct LexerError {
 
 impl fmt::Display for LexerError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "LexerError: [Line {}] {}", self.line, self.err)
+        write!(f, "LexerError: {}", self.err)
     }
 }
 

@@ -23,7 +23,7 @@ pub struct RuntimeError {
 
 impl fmt::Display for RuntimeError {
     fn fmt<'a>(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "RuntimeError [Line {}]: {}", self.line, self.err)
+        write!(f, "RuntimeError: {}", self.err)
     }
 }
 
