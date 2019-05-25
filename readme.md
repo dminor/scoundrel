@@ -145,3 +145,14 @@ separated by commas.
 ```
 fn (name) 'hello ' + name end ('world')
 ```
+
+Standard Library
+----------------
+
+A small standard library was implemented in Rust. The functions are described
+below:
+* `car`: Return the first element of a list.
+* `cdr`: Return a list containing every element of a list except the first.
+* `len`: Return the length of a list or string.
+* `prime?`: Return true if the number is a prime.
+* `sqrt`: Return the square root of a number.

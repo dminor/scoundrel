@@ -77,10 +77,71 @@ fn len(
     }
 }
 
+fn is_prime(
+    line: usize,
+    arguments: Vec<interpreter::Value>,
+) -> Result<interpreter::Value, interpreter::RuntimeError> {
+    if arguments.len() != 1 {
+        return Err(interpreter::RuntimeError {
+            err: "prime? takes one argument.".to_string(),
+            line: line,
+        });
+    }
+
+    match &arguments[0] {
+        interpreter::Value::Number(n) => {
+            if *n == 1.0 || *n == 2.0 {
+                Ok(interpreter::Value::Boolean(true))
+            } else if *n % 2.0 == 0.0 {
+                Ok(interpreter::Value::Boolean(false))
+            } else {
+                // TODO: Consider Miller-Rabin instead, this is super slow
+                let mut i = 3.0;
+                while i < n.sqrt() {
+                    if *n % i == 0.0 {
+                        return Ok(interpreter::Value::Boolean(false));
+                    }
+                    i += 2.0;
+                }
+                Ok(interpreter::Value::Boolean(true))
+            }
+        }
+        _ => Err(interpreter::RuntimeError {
+            err: "Type mismatch, prime? expects number.".to_string(),
+            line: line,
+        }),
+    }
+}
+
+fn sqrt(
+    line: usize,
+    arguments: Vec<interpreter::Value>,
+) -> Result<interpreter::Value, interpreter::RuntimeError> {
+    if arguments.len() != 1 {
+        return Err(interpreter::RuntimeError {
+            err: "sqrt takes one argument.".to_string(),
+            line: line,
+        });
+    }
+
+    match &arguments[0] {
+        interpreter::Value::Number(n) => Ok(interpreter::Value::Number(n.sqrt())),
+        _ => Err(interpreter::RuntimeError {
+            err: "Type mismatch, sqrt expects number.".to_string(),
+            line: line,
+        }),
+    }
+}
+
 pub fn register(env: &mut HashMap<String, interpreter::Value>) {
     env.insert("car".to_string(), interpreter::Value::RustFunction(car));
     env.insert("cdr".to_string(), interpreter::Value::RustFunction(cdr));
+    env.insert(
+        "prime?".to_string(),
+        interpreter::Value::RustFunction(is_prime),
+    );
     env.insert("len".to_string(), interpreter::Value::RustFunction(len));
+    env.insert("sqrt".to_string(), interpreter::Value::RustFunction(sqrt));
 }
 
 #[cfg(test)]
@@ -210,5 +271,11 @@ mod tests {
             Number,
             3.0
         );
+
+        eval!("sqrt(4)", Number, 2.0);
+        eval!("prime?(1)", Boolean, true);
+        eval!("prime?(2)", Boolean, true);
+        eval!("prime?(4)", Boolean, false);
+        eval!("prime?(15)", Boolean, false);
     }
 }

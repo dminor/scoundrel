@@ -280,7 +280,7 @@ pub fn scan(src: &str) -> Result<LinkedList<LexedToken>, LexerError> {
                     loop {
                         match chars.peek() {
                             Some(c) => {
-                                if c.is_alphanumeric() || *c == '.' {
+                                if c.is_alphanumeric() || *c == '.' || *c == '?' {
                                     v.push(*c);
                                     chars.next();
                                 } else {
