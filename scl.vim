@@ -4,7 +4,7 @@ endif
 
 syn match scoundrelComment "\v\(\*.*\*\)"
 
-syn keyword scoundrelKeyword and else elsif end false function
+syn keyword scoundrelKeyword and else elsif end false fn
 syn keyword scoundrelKeyword if in let mod or then true
 syn match scoundrelKeyword "\v\$"
 
