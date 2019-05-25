@@ -29,9 +29,6 @@ pub enum Token {
 
     // Keywords
     And,
-    Break,
-    Continue,
-    Do,
     Else,
     Elsif,
     End,
@@ -42,10 +39,8 @@ pub enum Token {
     Let,
     Mod,
     Or,
-    Return,
     Then,
     True,
-    While,
 }
 
 impl fmt::Display for Token {
@@ -71,9 +66,6 @@ impl fmt::Display for Token {
             Token::Str(s) => write!(f, "{}", s),
             Token::Number(n) => write!(f, "{}", n),
             Token::And => write!(f, "and"),
-            Token::Break => write!(f, "break"),
-            Token::Continue => write!(f, "continue"),
-            Token::Do => write!(f, "do"),
             Token::Else => write!(f, "else"),
             Token::Elsif => write!(f, "elsif"),
             Token::End => write!(f, "end"),
@@ -85,10 +77,8 @@ impl fmt::Display for Token {
             Token::Mod => write!(f, "mod"),
             Token::Not => write!(f, "not"),
             Token::Or => write!(f, "or"),
-            Token::Return => write!(f, "return"),
             Token::Then => write!(f, "then"),
             Token::True => write!(f, "true"),
-            Token::While => write!(f, "while"),
         }
     }
 }
@@ -318,15 +308,6 @@ pub fn scan(src: &str) -> Result<LinkedList<LexedToken>, LexerError> {
                         "and" => {
                             push_token!(Token::And, tokens, line, pos);
                         }
-                        "break" => {
-                            push_token!(Token::Break, tokens, line, pos);
-                        }
-                        "continue" => {
-                            push_token!(Token::Continue, tokens, line, pos);
-                        }
-                        "do" => {
-                            push_token!(Token::Do, tokens, line, pos);
-                        }
                         "else" => {
                             push_token!(Token::Else, tokens, line, pos);
                         }
@@ -360,17 +341,11 @@ pub fn scan(src: &str) -> Result<LinkedList<LexedToken>, LexerError> {
                         "or" => {
                             push_token!(Token::Or, tokens, line, pos);
                         }
-                        "return" => {
-                            push_token!(Token::Return, tokens, line, pos);
-                        }
                         "then" => {
                             push_token!(Token::Then, tokens, line, pos);
                         }
                         "true" => {
                             push_token!(Token::True, tokens, line, pos);
-                        }
-                        "while" => {
-                            push_token!(Token::While, tokens, line, pos);
                         }
                         _ => match s.parse::<f64>() {
                             Ok(n) => {
@@ -504,13 +479,12 @@ mod tests {
             lexer::Token::False
         );
         scan!(
-            "fn x(arg)\n    return arg*2\nend",
+            "fn x(arg)\n    arg*2\nend",
             lexer::Token::Function,
             lexer::Token::Identifier("x".to_string()),
             lexer::Token::LeftParen,
             lexer::Token::Identifier("arg".to_string()),
             lexer::Token::RightParen,
-            lexer::Token::Return,
             lexer::Token::Identifier("arg".to_string()),
             lexer::Token::Star,
             lexer::Token::Number(2.0),
@@ -530,22 +504,6 @@ mod tests {
             lexer::Token::Number(3.0),
             lexer::Token::End
         );
-        scan!(
-            "while true or false do\n    i := i + 1\n    break\nend",
-            lexer::Token::While,
-            lexer::Token::True,
-            lexer::Token::Or,
-            lexer::Token::False,
-            lexer::Token::Do,
-            lexer::Token::Identifier("i".to_string()),
-            lexer::Token::ColonEqual,
-            lexer::Token::Identifier("i".to_string()),
-            lexer::Token::Plus,
-            lexer::Token::Number(1.0),
-            lexer::Token::Break,
-            lexer::Token::End
-        );
-        scan!("continue", lexer::Token::Continue);
         scan!(
             "Ὦ := 'φῶς'",
             lexer::Token::Identifier("Ὦ".to_string()),
