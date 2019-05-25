@@ -151,8 +151,9 @@ Standard Library
 
 A small standard library was implemented in Rust. The functions are described
 below:
-* `car`: Return the first element of a list.
-* `cdr`: Return a list containing every element of a list except the first.
-* `len`: Return the length of a list or string.
-* `prime?`: Return true if the number is a prime.
-* `sqrt`: Return the square root of a number.
+* `car(v)`: Return the first element of a list or string.
+* `cdr(v)`: Return the elements of a list or string excluding the first.
+* `len(v)`: Return the length of a list or string.
+* `prime?(v)`: Return true if the number is a prime.
+* `sqrt(v)`: Return the square root of a number.
+* `str(v)`: Return the result of converting a value to a string.

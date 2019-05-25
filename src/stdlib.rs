@@ -19,9 +19,20 @@ fn car(
                 err: "car called on empty list.".to_string(),
                 line: line,
             }),
-        },
+        }
+        interpreter::Value::Str(s) => {
+            match s.chars().nth(0) {
+                Some(v) => {
+                    Ok(interpreter::Value::Str(v.to_string()))
+                }
+                _ => Err(interpreter::RuntimeError {
+                    err: "car called on empty string.".to_string(),
+                    line: line,
+                }),
+            }
+        }
         _ => Err(interpreter::RuntimeError {
-            err: "Type mismatch, car expects list.".to_string(),
+            err: "Type mismatch, car expects list or string.".to_string(),
             line: line,
         }),
     }
@@ -49,8 +60,20 @@ fn cdr(
                 }),
             }
         }
+        interpreter::Value::Str(s) => {
+            if s.len() > 0 {
+                let mut substr = s.chars();
+                substr.next();
+                return Ok(interpreter::Value::Str(substr.collect()));
+            } else {
+                return Err(interpreter::RuntimeError {
+                    err: "cdr called on empty string.".to_string(),
+                    line: line,
+                });
+            }
+        }
         _ => Err(interpreter::RuntimeError {
-            err: "Type mismatch, cdr expects list.".to_string(),
+            err: "Type mismatch, cdr expects list or string.".to_string(),
             line: line,
         }),
     }
@@ -68,8 +91,8 @@ fn len(
     }
 
     match &arguments[0] {
-        interpreter::Value::Str(s) => Ok(interpreter::Value::Number(s.len() as f64)),
         interpreter::Value::List(v) => Ok(interpreter::Value::Number(v.len() as f64)),
+        interpreter::Value::Str(s) => Ok(interpreter::Value::Number(s.len() as f64)),
         _ => Err(interpreter::RuntimeError {
             err: "Type mismatch, len expects string or list.".to_string(),
             line: line,
@@ -133,6 +156,20 @@ fn sqrt(
     }
 }
 
+fn to_str(
+    line: usize,
+    arguments: Vec<interpreter::Value>,
+) -> Result<interpreter::Value, interpreter::RuntimeError> {
+    if arguments.len() != 1 {
+        return Err(interpreter::RuntimeError {
+            err: "str takes one argument.".to_string(),
+            line: line,
+        });
+    }
+
+    Ok(interpreter::Value::Str(arguments[0].to_string()))
+}
+
 pub fn register(env: &mut HashMap<String, interpreter::Value>) {
     env.insert("car".to_string(), interpreter::Value::RustFunction(car));
     env.insert("cdr".to_string(), interpreter::Value::RustFunction(cdr));
@@ -142,6 +179,7 @@ pub fn register(env: &mut HashMap<String, interpreter::Value>) {
     );
     env.insert("len".to_string(), interpreter::Value::RustFunction(len));
     env.insert("sqrt".to_string(), interpreter::Value::RustFunction(sqrt));
+    env.insert("str".to_string(), interpreter::Value::RustFunction(to_str));
 }
 
 #[cfg(test)]
@@ -196,8 +234,11 @@ mod tests {
     fn evals() {
         eval!("car([1])", Number, 1.0);
         evalfails!("car([])", "car called on empty list.");
-        evalfails!("car('hello world')", "Type mismatch, car expects list.");
+        eval!("car('hello world')", Str, "h".to_string());
+        evalfails!("car(42)", "Type mismatch, car expects list or string.");
+        eval!("cdr('hello world')", Str, "ello world".to_string());
         evalfails!("cdr([])", "cdr called on empty list.");
+        evalfails!("cdr('')", "cdr called on empty string.");
 
         match lexer::scan("cdr([42])") {
             Ok(mut tokens) => {
@@ -277,5 +318,7 @@ mod tests {
         eval!("prime?(2)", Boolean, true);
         eval!("prime?(4)", Boolean, false);
         eval!("prime?(15)", Boolean, false);
+        eval!("str(42)", Str, "42".to_string());
+        eval!("str(false)", Str, "false".to_string());
     }
 }
