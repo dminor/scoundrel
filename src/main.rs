@@ -7,11 +7,14 @@ use std::io::prelude::*;
 mod interpreter;
 mod lexer;
 mod parser;
+mod stdlib;
 
 use std::io::{self, BufRead, Write};
 
 fn eval(filename: String, s: String) {
-    let env = HashMap::new();
+    let mut env = HashMap::new();
+    stdlib::register(&mut env);
+
     let lines: Vec<&str> = s.split('\n').collect();
     match lexer::scan(&s) {
         Ok(mut tokens) => match parser::parse(&mut tokens) {

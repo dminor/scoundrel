@@ -12,6 +12,7 @@ pub enum Value<'a> {
     List(LinkedList<Value<'a>>),
     Number(f64),
     Recur(Vec<Value<'a>>),
+    RustFunction(fn(usize, Vec<Value>) -> Result<Value, RuntimeError>),
     Str(String),
 }
 
@@ -43,6 +44,7 @@ impl<'a> fmt::Display for Value<'a> {
             }
             Value::Number(n) => write!(f, "{}", n),
             Value::Recur(_) => write!(f, "<recur>"),
+            Value::RustFunction(_) => write!(f, "<lambda>"),
             Value::Str(s) => write!(f, "{}", s),
         }
     }
@@ -201,7 +203,8 @@ fn truthy(value: Value) -> bool {
                 true
             }
         }
-        Value::Recur(_) => false,
+        Value::Recur(_) => true,
+        Value::RustFunction(_) => true,
         Value::Str(s) => {
             if s.len() == 0 {
                 false
@@ -342,6 +345,20 @@ pub fn eval<'a>(
                         _ => return result,
                     }
                 }
+            }
+            Ok(Value::RustFunction(func)) => {
+                let mut func_args = Vec::new();
+                for i in 0..args.len() {
+                    match eval(&env, &args[i]) {
+                        Ok(v) => {
+                            func_args.push(v);
+                        }
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    }
+                }
+                func(*line, func_args)
             }
             Err(e) => Err(e),
             _ => {
