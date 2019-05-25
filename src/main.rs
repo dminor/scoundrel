@@ -1,3 +1,4 @@
+use std::cmp::min;
 use std::collections::HashMap;
 use std::env;
 use std::fs::File;
@@ -9,8 +10,9 @@ mod parser;
 
 use std::io::{self, BufRead, Write};
 
-fn eval(s: String) {
+fn eval(filename: String, s: String) {
     let env = HashMap::new();
+    let lines: Vec<&str> = s.split('\n').collect();
     match lexer::scan(&s) {
         Ok(mut tokens) => match parser::parse(&mut tokens) {
             Ok(ast) => match interpreter::eval(&env, &ast) {
@@ -18,15 +20,33 @@ fn eval(s: String) {
                     println!("{}", v);
                 }
                 Err(err) => {
+                    let line = min(lines.len() - 1, err.line);
+                    let width = line.to_string().len() + 2;
                     println!("{}", err);
+                    println!("{s:>width$}|", s = " ", width = width);
+                    println!(" {} | {}", line, lines[line]);
+                    println!("{s:>width$}|", s = " ", width = width);
+                    println!("--> {}:{}", filename, line);
                 }
             },
             Err(err) => {
+                let line = min(lines.len() - 1, err.line);
+                let width = line.to_string().len() + 2;
                 println!("{}", err);
+                println!("{s:>width$}|", s = " ", width = width);
+                println!(" {} | {}", line, lines[line]);
+                println!("{s:>width$}|", s = " ", width = width);
+                println!("--> {}:{}", filename, line);
             }
         },
         Err(err) => {
+            let line = min(lines.len() - 1, err.line);
+            let width = line.to_string().len() + 2;
             println!("{}", err);
+            println!("{s:>width$}|", s = " ", width = width);
+            println!(" {} | {}", line, lines[line]);
+            println!("{s:>width$}|", s = " ", width = width);
+            println!("--> {}:{}", filename, line);
         }
     }
 }
@@ -34,10 +54,11 @@ fn eval(s: String) {
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 {
-        let mut file = File::open(args[1].to_string())?;
+        let filename = args[1].to_string();
+        let mut file = File::open(&filename)?;
         let mut program = String::new();
         file.read_to_string(&mut program)?;
-        eval(program);
+        eval(filename, program);
         return Ok(());
     }
 
@@ -50,7 +71,7 @@ fn main() -> io::Result<()> {
     for line in stdin.lock().lines() {
         match line {
             Ok(s) => {
-                eval(s);
+                eval("<stdin>".to_string(), s);
             }
             _ => break,
         }

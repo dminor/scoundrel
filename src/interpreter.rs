@@ -19,7 +19,6 @@ pub enum Value<'a> {
 pub struct RuntimeError {
     pub err: String,
     pub line: usize,
-    pub pos: usize,
 }
 
 impl fmt::Display for RuntimeError {
@@ -61,7 +60,6 @@ macro_rules! maybe_apply_op {
                 return Err(RuntimeError {
                     err: err,
                     line: $op.line,
-                    pos: $op.pos,
                 });
             }
         }
@@ -114,7 +112,6 @@ fn binaryop<'a>(
                                     return Err(RuntimeError {
                                         err: "Type mismatch, expected list.".to_string(),
                                         line: op.line,
-                                        pos: op.pos,
                                     });
                                 }
                             }
@@ -126,7 +123,6 @@ fn binaryop<'a>(
                                     return Err(RuntimeError {
                                         err: "Type mismatch, expected string.".to_string(),
                                         line: op.line,
-                                        pos: op.pos,
                                     });
                                 }
                             }
@@ -169,7 +165,6 @@ fn binaryop<'a>(
                             return Err(RuntimeError {
                                 err: "Internal error: invalid binary operation.".to_string(),
                                 line: op.line,
-                                pos: op.pos,
                             });
                         }
                     }
@@ -179,7 +174,6 @@ fn binaryop<'a>(
                     return Err(RuntimeError {
                         err: err,
                         line: op.line,
-                        pos: op.pos,
                     });
                 }
                 Err(e) => Err(e),
@@ -231,13 +225,11 @@ fn unaryop<'a>(
                 _ => Err(RuntimeError {
                     err: "Type mismatch, expected number.".to_string(),
                     line: op.line,
-                    pos: op.pos,
                 }),
             },
             _ => Err(RuntimeError {
                 err: "Internal error: invalid unary operator.".to_string(),
                 line: op.line,
-                pos: op.pos,
             }),
         },
         Err(e) => Err(e),
@@ -262,14 +254,12 @@ fn value<'a>(
                 Err(RuntimeError {
                     err: err,
                     line: token.line,
-                    pos: token.pos,
                 })
             }
         },
         _ => Err(RuntimeError {
             err: "Internal error: token has no value.".to_string(),
             line: token.line,
-            pos: token.pos,
         }),
     }
 }
@@ -292,69 +282,75 @@ pub fn eval<'a>(
                         return Err(RuntimeError {
                             err: "Expected identifier.".to_string(),
                             line: arg.line,
-                            pos: arg.pos,
                         });
                     }
                 }
             }
             Ok(Value::Function(fn_env, variables, body))
         }
-        parser::Ast::FunctionCall(function, args) => {
-            match eval(&env, function) {
-                Ok(Value::Function(fn_env, variables, body)) => {
-                    let mut call_env = env.clone();
-                    for kv in fn_env.iter() {
-                        call_env.insert(kv.0.to_string(), kv.1.clone());
-                    }
-
-                    if variables.len() != args.len() {
-                        return Err(RuntimeError {
-                            err: "Incorrect number of arguments to function call".to_string(),
-                            line: 0, //TODO
-                            pos: 0,
-                        });
-                    }
-
-                    for i in 0..variables.len() {
-                        match eval(&env, &args[i]) {
-                            Ok(v) => {
-                                call_env.insert(variables[i].clone(), v);
-                            }
-                            Err(e) => {
-                                return Err(e);
-                            }
-                        }
-                    }
-                    loop {
-                        let result = eval(&call_env, body);
-                        match result {
-                            Ok(Value::Recur(args)) => {
-                                if variables.len() != args.len() {
-                                    return Err(RuntimeError {
-                                        err: "Incorrect number of arguments in recur".to_string(),
-                                        line: 0, //TODO
-                                        pos: 0,
-                                    });
-                                }
-
-                                for i in 0..variables.len() {
-                                    call_env.insert(variables[i].clone(), args[i].clone());
-                                }
-                            }
-                            _ => return result,
-                        }
-                    }
+        parser::Ast::FunctionCall(line, function, args) => match eval(&env, function) {
+            Ok(Value::Function(fn_env, variables, body)) => {
+                let mut call_env = env.clone();
+                for kv in fn_env.iter() {
+                    call_env.insert(kv.0.to_string(), kv.1.clone());
                 }
-                Err(e) => Err(e),
-                _ => {
+
+                if variables.len() != args.len() {
+                    let mut err =
+                        "Wrong number of arguments in function call, expected ".to_string();
+                    err.push_str(&variables.len().to_string());
+                    err.push_str(" received ");
+                    err.push_str(&args.len().to_string());
+                    err.push('.');
                     return Err(RuntimeError {
-                        err: "Attempt to call non-function.".to_string(),
-                        line: 0, //TODO
-                        pos: 0,
+                        err: err,
+                        line: *line,
                     });
                 }
+
+                for i in 0..variables.len() {
+                    match eval(&env, &args[i]) {
+                        Ok(v) => {
+                            call_env.insert(variables[i].clone(), v);
+                        }
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    }
+                }
+                loop {
+                    let result = eval(&call_env, body);
+                    match result {
+                        Ok(Value::Recur(args)) => {
+                            if variables.len() != args.len() {
+                                let mut err =
+                                    "Wrong number of arguments in recur, expected ".to_string();
+                                err.push_str(&variables.len().to_string());
+                                err.push_str(" received ");
+                                err.push_str(&args.len().to_string());
+                                err.push('.');
+                                return Err(RuntimeError {
+                                    err: err,
+                                    line: *line,
+                                });
+                            }
+
+                            for i in 0..variables.len() {
+                                call_env.insert(variables[i].clone(), args[i].clone());
+                            }
+                        }
+                        _ => return result,
+                    }
+                }
             }
-        }
+            Err(e) => Err(e),
+            _ => {
+                return Err(RuntimeError {
+                    err: "Attempt to call non-function.".to_string(),
+                    line: *line,
+                });
+            }
+        },
         parser::Ast::Let(variables, expr) => {
             // TODO: maintaining a stack of environments would
             // likely be more efficient than copying here.
@@ -373,7 +369,6 @@ pub fn eval<'a>(
                         return Err(RuntimeError {
                             err: "Expected identifier.".to_string(),
                             line: var.line,
-                            pos: var.pos,
                         });
                     }
                 }
@@ -604,6 +599,11 @@ mod tests {
             end",
             Number,
             233168.0
+        );
+
+        evalfails!(
+            "fn () 1 end (2)",
+            "Wrong number of arguments in function call, expected 0 received 1."
         );
     }
 }

@@ -23,7 +23,7 @@ value          -> IDENTIFIER | NUMBER | STR | "false" | "true"
 pub enum Ast {
     BinaryOp(lexer::LexedToken, Box<Ast>, Box<Ast>),
     Function(Vec<lexer::LexedToken>, Box<Ast>),
-    FunctionCall(Box<Ast>, Vec<Ast>),
+    FunctionCall(usize, Box<Ast>, Vec<Ast>),
     If(Vec<(Ast, Ast)>, Box<Ast>),
     Let(Vec<(lexer::LexedToken, Ast)>, Box<Ast>),
     List(Vec<Ast>),
@@ -36,12 +36,11 @@ pub enum Ast {
 pub struct ParserError {
     pub err: String,
     pub line: usize,
-    pub pos: usize,
 }
 
 impl fmt::Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "ParserError [Line {}]: {}", self.line, self.err)
+        write!(f, "ParserError: {}", self.err)
     }
 }
 
@@ -56,15 +55,13 @@ macro_rules! expect {
                     return Err(ParserError {
                         err: $err,
                         line: token.line,
-                        pos: token.pos,
                     });
                 }
             },
             None => {
                 return Err(ParserError {
                     err: "Unexpected end of input.".to_string(),
-                    line: 0,
-                    pos: 0,
+                    line: usize::max_value(),
                 });
             }
         }
@@ -75,6 +72,7 @@ fn expression(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserE
     match tokens.front() {
         Some(peek) => match peek.token {
             lexer::Token::Let => {
+                let line = peek.line;
                 tokens.pop_front();
                 let mut variables = Vec::<(lexer::LexedToken, Ast)>::new();
                 loop {
@@ -84,7 +82,6 @@ fn expression(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserE
                                 let var = lexer::LexedToken {
                                     token: lexer::Token::Identifier(s),
                                     line: token.line,
-                                    pos: token.pos,
                                 };
                                 expect!(tokens, ColonEqual, "Expected :=.".to_string());
                                 match expression(tokens) {
@@ -103,15 +100,13 @@ fn expression(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserE
                                 return Err(ParserError {
                                     err: "Expected identifier.".to_string(),
                                     line: token.line,
-                                    pos: token.pos,
                                 });
                             }
                         },
                         None => {
                             return Err(ParserError {
                                 err: "Unexpected end of input.".to_string(),
-                                line: 0,
-                                pos: 0,
+                                line: line,
                             });
                         }
                     }
@@ -129,8 +124,7 @@ fn expression(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserE
         None => {
             return Err(ParserError {
                 err: "Unexpected end of input.".to_string(),
-                line: 0,
-                pos: 0,
+                line: usize::max_value(),
             });
         }
     }
@@ -140,6 +134,7 @@ fn conditional(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, Parser
     match tokens.front() {
         Some(peek) => match peek.token {
             lexer::Token::If => {
+                let line = peek.line;
                 tokens.pop_front();
                 let mut conds = Vec::<(Ast, Ast)>::new();
                 loop {
@@ -177,15 +172,13 @@ fn conditional(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, Parser
                                 return Err(ParserError {
                                     err: "Expected else.".to_string(),
                                     line: token.line,
-                                    pos: token.pos,
                                 });
                             }
                         },
                         None => {
                             return Err(ParserError {
                                 err: "Unexpected end of input.".to_string(),
-                                line: 0,
-                                pos: 0,
+                                line: line,
                             });
                         }
                     }
@@ -196,8 +189,7 @@ fn conditional(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, Parser
         None => {
             return Err(ParserError {
                 err: "Unexpected end of input.".to_string(),
-                line: 0,
-                pos: 0,
+                line: usize::max_value(),
             });
         }
     }
@@ -363,8 +355,7 @@ fn unary(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
                         // Unreachable
                         return Err(ParserError {
                             err: "Unexpected end of input.".to_string(),
-                            line: 0,
-                            pos: 0,
+                            line: usize::max_value(),
                         });
                     }
                 }
@@ -374,8 +365,7 @@ fn unary(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
         None => {
             return Err(ParserError {
                 err: "Unexpected end of input.".to_string(),
-                line: 0,
-                pos: 0,
+                line: usize::max_value(),
             });
         }
     }
@@ -388,6 +378,7 @@ fn call(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError> 
         Ok(ast) => match tokens.front() {
             Some(peek) => match peek.token {
                 lexer::Token::LeftParen => {
+                    let line = peek.line;
                     tokens.pop_front();
                     let mut args = Vec::<Ast>::new();
                     loop {
@@ -405,8 +396,7 @@ fn call(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError> 
                             None => {
                                 return Err(ParserError {
                                     err: "Unexpected end of input in function call.".to_string(),
-                                    line: 0,
-                                    pos: 0,
+                                    line: line,
                                 });
                             }
                         }
@@ -415,7 +405,7 @@ fn call(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError> 
                             Err(err) => return Err(err),
                         }
                     }
-                    Ok(Ast::FunctionCall(Box::new(ast), args))
+                    Ok(Ast::FunctionCall(line, Box::new(ast), args))
                 }
                 _ => Ok(ast),
             },
@@ -439,7 +429,6 @@ fn value(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
                                 variables.push(lexer::LexedToken {
                                     token: lexer::Token::Identifier(s),
                                     line: token.line,
-                                    pos: token.pos,
                                 });
                             }
                             lexer::Token::Comma => {}
@@ -450,15 +439,13 @@ fn value(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
                                 return Err(ParserError {
                                     err: "Expected identifier.".to_string(),
                                     line: token.line,
-                                    pos: token.pos,
                                 });
                             }
                         },
                         None => {
                             return Err(ParserError {
                                 err: "Unexpected end of input.".to_string(),
-                                line: 0,
-                                pos: 0,
+                                line: usize::max_value(),
                             });
                         }
                     }
@@ -474,7 +461,6 @@ fn value(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
             lexer::Token::Identifier(s) => Ok(Ast::Value(lexer::LexedToken {
                 token: lexer::Token::Identifier(s),
                 line: token.line,
-                pos: token.pos,
             })),
             lexer::Token::True => Ok(Ast::Value(token)),
             lexer::Token::Number(_) => Ok(Ast::Value(token)),
@@ -496,7 +482,6 @@ fn value(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
                             return Err(ParserError {
                                 err: "Unexpected end of input when looking for ].".to_string(),
                                 line: token.line,
-                                pos: token.pos,
                             });
                         }
                     }
@@ -512,7 +497,6 @@ fn value(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
                                 return Err(ParserError {
                                     err: "Unexpected token when looking for ).".to_string(),
                                     line: next.line,
-                                    pos: next.pos,
                                 });
                             }
                         }
@@ -522,7 +506,6 @@ fn value(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
                         return Err(ParserError {
                             err: "Unexpected end of input when looking for ].".to_string(),
                             line: token.line,
-                            pos: token.pos,
                         });
                     }
                 },
@@ -546,7 +529,6 @@ fn value(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
                             return Err(ParserError {
                                 err: "Unexpected end of input when looking for ).".to_string(),
                                 line: token.line,
-                                pos: token.pos,
                             });
                         }
                     }
@@ -560,15 +542,13 @@ fn value(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
                 Err(ParserError {
                     err: err,
                     line: token.line,
-                    pos: token.pos,
                 })
             }
         },
         None => {
             return Err(ParserError {
                 err: "Unexpected end of input.".to_string(),
-                line: 0,
-                pos: 0,
+                line: usize::max_value(),
             });
         }
     }
@@ -1068,7 +1048,8 @@ mod tests {
                 assert_eq!(tokens.len(), 15);
                 match parser::parse(&mut tokens) {
                     Ok(ast) => match ast {
-                        parser::Ast::FunctionCall(func, args) => {
+                        parser::Ast::FunctionCall(line, func, args) => {
+                            assert_eq!(line, 0);
                             match *func {
                                 parser::Ast::Function(args, body) => {
                                     assert_eq!(args.len(), 2);
