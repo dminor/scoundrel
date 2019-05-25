@@ -90,7 +90,6 @@ fn (n, sum)
         $(n + 1, sum + n)
     end
 end (0, 0)
-
 ```
 
 ### String
@@ -121,7 +120,6 @@ elsif x == 2 then
 else
     3
 end
-
 ```
 
 ### Let
@@ -143,7 +141,6 @@ end
 
 A function call consists of a list of arguments in parentheses, optionally
 separated by commas.
-
 
 ```
 fn (name) 'hello ' + name end ('world')
