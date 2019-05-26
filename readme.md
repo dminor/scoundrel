@@ -155,6 +155,8 @@ below:
 * `car(v)`: Return the first element of a list or string.
 * `cdr(v)`: Return the elements of a list or string excluding the first.
 * `len(v)`: Return the length of a list or string.
-* `prime?(v)`: Return true if the number is a prime.
-* `sqrt(v)`: Return the square root of a number.
+* `map(fun, list)`: Return the list that results from applying fn to each item of the list.
+* `prime?(n)`: Return true if the number is a prime.
+* `reduce(fun, list)`: Return the value that results from applying fn cumulatively to each item of the list l, returning a single result. The function must take two arguments.
+* `sqrt(n)`: Return the square root of a number.
 * `str(v)`: Return the result of converting a value to a string.

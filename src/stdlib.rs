@@ -1,5 +1,6 @@
 use crate::interpreter;
 use std::collections::HashMap;
+use std::collections::LinkedList;
 
 fn car(
     line: usize,
@@ -75,27 +76,6 @@ fn cdr(
     }
 }
 
-fn len(
-    line: usize,
-    arguments: Vec<interpreter::Value>,
-) -> Result<interpreter::Value, interpreter::RuntimeError> {
-    if arguments.len() != 1 {
-        return Err(interpreter::RuntimeError {
-            err: "len takes one argument.".to_string(),
-            line: line,
-        });
-    }
-
-    match &arguments[0] {
-        interpreter::Value::List(v) => Ok(interpreter::Value::Number(v.len() as f64)),
-        interpreter::Value::Str(s) => Ok(interpreter::Value::Number(s.len() as f64)),
-        _ => Err(interpreter::RuntimeError {
-            err: "Type mismatch, len expects string or list.".to_string(),
-            line: line,
-        }),
-    }
-}
-
 fn is_prime(
     line: usize,
     arguments: Vec<interpreter::Value>,
@@ -127,6 +107,131 @@ fn is_prime(
         }
         _ => Err(interpreter::RuntimeError {
             err: "Type mismatch, prime? expects number.".to_string(),
+            line: line,
+        }),
+    }
+}
+
+fn len(
+    line: usize,
+    arguments: Vec<interpreter::Value>,
+) -> Result<interpreter::Value, interpreter::RuntimeError> {
+    if arguments.len() != 1 {
+        return Err(interpreter::RuntimeError {
+            err: "len takes one argument.".to_string(),
+            line: line,
+        });
+    }
+
+    match &arguments[0] {
+        interpreter::Value::List(v) => Ok(interpreter::Value::Number(v.len() as f64)),
+        interpreter::Value::Str(s) => Ok(interpreter::Value::Number(s.len() as f64)),
+        _ => Err(interpreter::RuntimeError {
+            err: "Type mismatch, len expects string or list.".to_string(),
+            line: line,
+        }),
+    }
+}
+
+fn map(
+    line: usize,
+    arguments: Vec<interpreter::Value>,
+) -> Result<interpreter::Value, interpreter::RuntimeError> {
+    if arguments.len() <= 1 {
+        return Err(interpreter::RuntimeError {
+            err: "map takes at least two arguments.".to_string(),
+            line: line,
+        });
+    }
+
+    match &arguments[0] {
+        interpreter::Value::Function(env, args, body) => {
+            if args.len() != 1 {
+                return Err(interpreter::RuntimeError {
+                    err: "Function passed to map should take one argument.".to_string(),
+                    line: line,
+                });
+            }
+            match &arguments[1] {
+                interpreter::Value::List(list) => {
+                    let mut result = LinkedList::new();
+                    for item in list {
+                        let mut env = env.clone();
+                        env.insert(args[0].clone(), item.clone());
+                        match interpreter::eval(&env, body) {
+                            Ok(v) => result.push_back(v),
+                            Err(e) => {
+                                return Err(e);
+                            }
+                        }
+                    }
+                    return Ok(interpreter::Value::List(result));
+                }
+                _ => Err(interpreter::RuntimeError {
+                    err: "Type mismatch, map expects list as second argument.".to_string(),
+                    line: line,
+                }),
+            }
+        }
+        _ => Err(interpreter::RuntimeError {
+            err: "Type mismatch, map expects function as first argument.".to_string(),
+            line: line,
+        }),
+    }
+}
+
+fn reduce(
+    line: usize,
+    arguments: Vec<interpreter::Value>,
+) -> Result<interpreter::Value, interpreter::RuntimeError> {
+    if arguments.len() != 2 {
+        return Err(interpreter::RuntimeError {
+            err: "reduce takes exactly two arguments.".to_string(),
+            line: line,
+        });
+    }
+
+    match &arguments[0] {
+        interpreter::Value::Function(env, args, body) => {
+            if args.len() != 2 {
+                return Err(interpreter::RuntimeError {
+                    err: "Function passed to reduce should take two arguments.".to_string(),
+                    line: line,
+                });
+            }
+            match &arguments[1] {
+                interpreter::Value::List(list) => {
+                    let mut iter = list.iter();
+                    match iter.next() {
+                        Some(v) => {
+                            let mut result = v.clone();
+                            for item in iter {
+                                let mut env = env.clone();
+                                env.insert(args[0].clone(), result);
+                                env.insert(args[1].clone(), item.clone());
+                                match interpreter::eval(&env, body) {
+                                    Ok(v) => result = v,
+                                    Err(e) => {
+                                        return Err(e);
+                                    }
+                                }
+                            }
+                            return Ok(result);
+                        }
+                        _ => Err(interpreter::RuntimeError {
+                            err: "reduce applied to empty list.".to_string(),
+                            line: line,
+                        }),
+                    }
+                }
+                _ => Err(interpreter::RuntimeError {
+                    err: "Type mismatch, reduce expects list as second argument.".to_string(),
+                    line: line,
+                }),
+            }
+        }
+        _ => Err(interpreter::RuntimeError {
+            err: "Type mismatch, reduce expects function as first argument.".to_string(),
             line: line,
         }),
     }
@@ -174,6 +279,11 @@ pub fn register(env: &mut HashMap<String, interpreter::Value>) {
         interpreter::Value::RustFunction(is_prime),
     );
     env.insert("len".to_string(), interpreter::Value::RustFunction(len));
+    env.insert("map".to_string(), interpreter::Value::RustFunction(map));
+    env.insert(
+        "reduce".to_string(),
+        interpreter::Value::RustFunction(reduce),
+    );
     env.insert("sqrt".to_string(), interpreter::Value::RustFunction(sqrt));
     env.insert("str".to_string(), interpreter::Value::RustFunction(to_str));
 }
@@ -316,5 +426,55 @@ mod tests {
         eval!("prime?(15)", Boolean, false);
         eval!("str(42)", Str, "42".to_string());
         eval!("str(false)", Str, "false".to_string());
+
+        eval!(
+            "
+            let square := fn(x)
+                    x*x
+                end
+                sum := fn(x, y)
+                    x + y
+                end
+            in
+                reduce(sum, map(square, [1, 2, 3, 4, 5]))
+            end",
+            Number,
+            55.0
+        );
+
+        evalfails!(
+            "map(fn() 1 end, [1 2 3])",
+            "Function passed to map should take one argument."
+        );
+        evalfails!(
+            "reduce(fn(x) 1 end, [1 2 3])",
+            "Function passed to reduce should take two arguments."
+        );
+        evalfails!(
+            "reduce(fn(x, y) x + y end, [])",
+            "reduce applied to empty list."
+        );
+        eval!("reduce(fn(x, y) x + y end, [1])", Number, 1.0);
+
+        match lexer::scan("map(fn(x) x end, [])") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 12);
+                let mut env = HashMap::new();
+                stdlib::register(&mut env);
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match interpreter::eval(&env, &ast) {
+                        Ok(v) => match v {
+                            interpreter::Value::List(list) => {
+                                assert_eq!(list.len(), 0);
+                            }
+                            _ => assert!(false),
+                        },
+                        _ => assert!(false),
+                    },
+                    _ => assert!(false),
+                }
+            }
+            _ => assert!(false),
+        }
     }
 }
