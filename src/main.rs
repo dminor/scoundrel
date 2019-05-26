@@ -23,7 +23,7 @@ fn eval(filename: String, s: String) {
                     println!("{}", v);
                 }
                 Err(err) => {
-                    let line = min(lines.len() - 1, err.line);
+                    let line = min(lines.len(), err.line) - 1;
                     let width = line.to_string().len() + 2;
                     println!("{}", err);
                     println!("{s:>width$}|", s = " ", width = width);
@@ -33,7 +33,7 @@ fn eval(filename: String, s: String) {
                 }
             },
             Err(err) => {
-                let line = min(lines.len() - 1, err.line);
+                let line = min(lines.len(), err.line) - 1;
                 let width = line.to_string().len() + 2;
                 println!("{}", err);
                 println!("{s:>width$}|", s = " ", width = width);
@@ -43,7 +43,7 @@ fn eval(filename: String, s: String) {
             }
         },
         Err(err) => {
-            let line = min(lines.len() - 1, err.line);
+            let line = min(lines.len(), err.line) - 1;
             let width = line.to_string().len() + 2;
             println!("{}", err);
             println!("{s:>width$}|", s = " ", width = width);

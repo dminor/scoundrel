@@ -118,7 +118,7 @@ macro_rules! push_token {
 }
 
 pub fn scan(src: &str) -> Result<LinkedList<LexedToken>, LexerError> {
-    let mut line = 0;
+    let mut line = 1;
     let mut tokens = LinkedList::<LexedToken>::new();
     let mut chars = src.chars().peekable();
     loop {
@@ -425,8 +425,8 @@ mod tests {
             lexer::Token::RightParen
         );
         scan!(":=", lexer::Token::ColonEqual);
-        scanfails!("::", "Unexpected token while parsing :=", 0);
-        scanfails!(":", "Unexpected end of input while parsing :=", 0);
+        scanfails!("::", "Unexpected token while parsing :=", 1);
+        scanfails!(":", "Unexpected end of input while parsing :=", 1);
         scan!(",", lexer::Token::Comma);
         scan!("-", lexer::Token::Minus);
         scan!("+", lexer::Token::Plus);
@@ -443,17 +443,17 @@ mod tests {
         scanfails!(
             "(* blah\nblah\nblah",
             "Unexpected end of input while scanning comment",
-            2
+            3
         );
         scanfails!(
             "'blah blah blah",
             "Unexpected end of input while scanning string",
-            0
+            1
         );
         scanfails!(
             "'blah blah\nblah",
             "Unexpected end of line while scanning string",
-            0
+            1
         );
         scan!(
             "'blah blah blah'",

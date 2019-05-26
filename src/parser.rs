@@ -1059,7 +1059,7 @@ mod tests {
                 match parser::parse(&mut tokens) {
                     Ok(ast) => match ast {
                         parser::Ast::FunctionCall(line, func, args) => {
-                            assert_eq!(line, 0);
+                            assert_eq!(line, 1);
                             match *func {
                                 parser::Ast::Function(args, body) => {
                                     assert_eq!(args.len(), 2);
