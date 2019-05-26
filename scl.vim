@@ -2,7 +2,7 @@ if exists("b:current_syntax")
   finish
 endif
 
-syn match scoundrelComment "\v\(\*.*\*\)"
+syn region scoundrelComment start="\v\(\*" end="\v\*\)"
 
 syn keyword scoundrelKeyword and else elsif end false fn
 syn keyword scoundrelKeyword if in let mod or then true
