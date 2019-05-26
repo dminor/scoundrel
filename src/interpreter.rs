@@ -637,5 +637,30 @@ mod tests {
             "fn () 1 end (2)",
             "Wrong number of arguments in function call, expected 0 received 1."
         );
+
+        eval!(
+            "
+            let f := fn(n)
+                    let iter := fn(d, largest)
+                            if d | largest then
+                                if d == n then
+                                    largest
+                                else
+                                    $(d + 1, largest)
+                                end
+                            else
+                                $(2, largest + 1)
+                            end
+                        end
+                    in
+                        iter(2, n)
+                    end
+                end
+            in
+                f(10)
+            end",
+            Number,
+            2520.0
+        );
     }
 }

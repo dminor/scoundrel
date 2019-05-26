@@ -6,7 +6,7 @@ use std::fmt;
 /*
 expression     -> "let" ( IDENTIFIER ":=" expression )* in expression end
                   | conditional
-conditional    -> "if" equality "then" equality ("elsif" equality "then" equality)* ("else" equality)? "end"
+conditional    -> "if" equality "then" expression ("elsif" equality "then" expression)* ("else" expression)? "end"
                   | equality
 equality       -> comparison ( ( "!=" | "==" ) comparison )*
 comparison     -> addition ( ( ">" | ">=" | "<" | "<=" ) addition )*
@@ -141,7 +141,7 @@ fn conditional(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, Parser
                     match expression(tokens) {
                         Ok(cond) => {
                             expect!(tokens, Then, "Expected then.".to_string());
-                            match equality(tokens) {
+                            match expression(tokens) {
                                 Ok(then) => {
                                     conds.push((cond, then));
                                 }
