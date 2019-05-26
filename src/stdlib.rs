@@ -19,18 +19,14 @@ fn car(
                 err: "car called on empty list.".to_string(),
                 line: line,
             }),
-        }
-        interpreter::Value::Str(s) => {
-            match s.chars().nth(0) {
-                Some(v) => {
-                    Ok(interpreter::Value::Str(v.to_string()))
-                }
-                _ => Err(interpreter::RuntimeError {
-                    err: "car called on empty string.".to_string(),
-                    line: line,
-                }),
-            }
-        }
+        },
+        interpreter::Value::Str(s) => match s.chars().nth(0) {
+            Some(v) => Ok(interpreter::Value::Str(v.to_string())),
+            _ => Err(interpreter::RuntimeError {
+                err: "car called on empty string.".to_string(),
+                line: line,
+            }),
+        },
         _ => Err(interpreter::RuntimeError {
             err: "Type mismatch, car expects list or string.".to_string(),
             line: line,
