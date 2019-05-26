@@ -66,7 +66,7 @@ list concatenation.
 
 ### Number
 
-Numbers are 64 floating point. The usual arithmetic and comparison operators
+Numbers are 64 bit floats. The usual arithmetic and comparison operators
 are supported: `+`, `-`, `*`, `/`, `mod`, '<', '<=', '==', '<>', '>', and '>='.
 The `|` operator returns true if the first value evenly divides the second,
 false otherwise, e.g. `a | b` is true if `b % a == 0`. The number zero is false
