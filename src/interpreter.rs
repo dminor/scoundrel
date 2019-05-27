@@ -537,9 +537,9 @@ mod tests {
         );
         eval!("let x := true in x or undefined end", Boolean, true);
         eval!("let f := fn (a) a*2 end in 2 end", Number, 2.0);
-        eval!("fn () 1 end ()", Number, 1.0);
-        eval!("fn (x, y) x + y end (2, 3)", Number, 5.0);
-        eval!("let f := fn (a) a*2 end in f(2) end", Number, 4.0);
+        eval!("fn() 1 end ()", Number, 1.0);
+        eval!("fn(x, y) x + y end (2, 3)", Number, 5.0);
+        eval!("let f := fn(a) a*2 end in f(2) end", Number, 4.0);
         evalfails!("2+true", "Type mismatch, expected number.");
         evalfails!("-true", "Type mismatch, expected number.");
         evalfails!("'a'+2", "Type mismatch, expected string.");
@@ -615,7 +615,7 @@ mod tests {
 
         eval!(
             "
-            let f := fn (n, sum)
+            let f := fn(n, sum)
                     if n == 1000 then
                         sum
                     else
@@ -634,7 +634,7 @@ mod tests {
         );
 
         evalfails!(
-            "fn () 1 end (2)",
+            "fn() 1 end (2)",
             "Wrong number of arguments in function call, expected 0 received 1."
         );
 

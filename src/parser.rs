@@ -1011,7 +1011,7 @@ mod tests {
             _ => assert!(false),
         }
 
-        match lexer::scan("fn (x, y) x + y end") {
+        match lexer::scan("fn(x, y) x + y end") {
             Ok(mut tokens) => {
                 assert_eq!(tokens.len(), 10);
                 match parser::parse(&mut tokens) {
@@ -1053,7 +1053,7 @@ mod tests {
             _ => assert!(false),
         }
 
-        match lexer::scan("fn (x, y) x + y end (2, 3)") {
+        match lexer::scan("fn(x, y) x + y end (2, 3)") {
             Ok(mut tokens) => {
                 assert_eq!(tokens.len(), 15);
                 match parser::parse(&mut tokens) {
