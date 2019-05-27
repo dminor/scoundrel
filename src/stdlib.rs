@@ -96,7 +96,7 @@ fn is_prime(
             } else {
                 // TODO: Consider Miller-Rabin instead, this is super slow
                 let mut i = 3.0;
-                while i < n.sqrt() {
+                while i <= n.sqrt().ceil() {
                     if *n % i == 0.0 {
                         return Ok(interpreter::Value::Boolean(false));
                     }
