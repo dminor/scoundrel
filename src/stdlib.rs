@@ -180,6 +180,34 @@ fn map(
     }
 }
 
+fn num(
+    line: usize,
+    arguments: Vec<interpreter::Value>,
+) -> Result<interpreter::Value, interpreter::RuntimeError> {
+    if arguments.len() != 1 {
+        return Err(interpreter::RuntimeError {
+            err: "num takes one argument.".to_string(),
+            line: line,
+        });
+    }
+
+    match &arguments[0] {
+        interpreter::Value::Str(s) => match s.parse::<f64>() {
+            Ok(n) => {
+                Ok(interpreter::Value::Number(n))
+            }
+            _ => Err(interpreter::RuntimeError {
+                err: "Could not convert string to number.".to_string(),
+                line: line,
+            }),
+        }
+        _ => Err(interpreter::RuntimeError {
+            err: "Type mismatch, num expects string.".to_string(),
+            line: line,
+        }),
+    }
+}
+
 fn reduce(
     line: usize,
     arguments: Vec<interpreter::Value>,
@@ -280,6 +308,7 @@ pub fn register(env: &mut HashMap<String, interpreter::Value>) {
     );
     env.insert("len".to_string(), interpreter::Value::RustFunction(len));
     env.insert("map".to_string(), interpreter::Value::RustFunction(map));
+    env.insert("num".to_string(), interpreter::Value::RustFunction(num));
     env.insert(
         "reduce".to_string(),
         interpreter::Value::RustFunction(reduce),
@@ -476,5 +505,8 @@ mod tests {
             }
             _ => assert!(false),
         }
+
+        eval!("num('42')", Number, 42.0);
+        evalfails!("num('forty two')", "Could not convert string to number.");
     }
 }
