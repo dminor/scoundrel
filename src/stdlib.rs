@@ -137,9 +137,9 @@ fn map(
     line: usize,
     arguments: Vec<interpreter::Value>,
 ) -> Result<interpreter::Value, interpreter::RuntimeError> {
-    if arguments.len() <= 1 {
+    if arguments.len() != 2 {
         return Err(interpreter::RuntimeError {
-            err: "map takes at least two arguments.".to_string(),
+            err: "map takes two arguments.".to_string(),
             line: line,
         });
     }
@@ -173,6 +173,24 @@ fn map(
                 }),
             }
         }
+        interpreter::Value::RustFunction(func) => match &arguments[1] {
+            interpreter::Value::List(list) => {
+                let mut result = LinkedList::new();
+                for item in list {
+                    match func(line, vec![item.clone()]) {
+                        Ok(v) => result.push_back(v),
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    }
+                }
+                return Ok(interpreter::Value::List(result));
+            }
+            _ => Err(interpreter::RuntimeError {
+                err: "Type mismatch, map expects list as second argument.".to_string(),
+                line: line,
+            }),
+        },
         _ => Err(interpreter::RuntimeError {
             err: "Type mismatch, map expects function as first argument.".to_string(),
             line: line,
@@ -193,14 +211,12 @@ fn num(
 
     match &arguments[0] {
         interpreter::Value::Str(s) => match s.parse::<f64>() {
-            Ok(n) => {
-                Ok(interpreter::Value::Number(n))
-            }
+            Ok(n) => Ok(interpreter::Value::Number(n)),
             _ => Err(interpreter::RuntimeError {
                 err: "Could not convert string to number.".to_string(),
                 line: line,
             }),
-        }
+        },
         _ => Err(interpreter::RuntimeError {
             err: "Type mismatch, num expects string.".to_string(),
             line: line,
@@ -214,7 +230,7 @@ fn reduce(
 ) -> Result<interpreter::Value, interpreter::RuntimeError> {
     if arguments.len() != 2 {
         return Err(interpreter::RuntimeError {
-            err: "reduce takes exactly two arguments.".to_string(),
+            err: "reduce takes two arguments.".to_string(),
             line: line,
         });
     }
@@ -258,6 +274,33 @@ fn reduce(
                 }),
             }
         }
+        interpreter::Value::RustFunction(func) => match &arguments[1] {
+            interpreter::Value::List(list) => {
+                let mut iter = list.iter();
+                match iter.next() {
+                    Some(v) => {
+                        let mut result = v.clone();
+                        for item in iter {
+                            match func(line, vec![result, item.clone()]) {
+                                Ok(v) => result = v,
+                                Err(e) => {
+                                    return Err(e);
+                                }
+                            }
+                        }
+                        return Ok(result);
+                    }
+                    _ => Err(interpreter::RuntimeError {
+                        err: "reduce applied to empty list.".to_string(),
+                        line: line,
+                    }),
+                }
+            }
+            _ => Err(interpreter::RuntimeError {
+                err: "Type mismatch, reduce expects list as second argument.".to_string(),
+                line: line,
+            }),
+        },
         _ => Err(interpreter::RuntimeError {
             err: "Type mismatch, reduce expects function as first argument.".to_string(),
             line: line,
@@ -363,6 +406,21 @@ mod tests {
                 _ => assert!(false),
             }
         }};
+    }
+
+    fn add(
+        line: usize,
+        arguments: Vec<interpreter::Value>,
+    ) -> Result<interpreter::Value, interpreter::RuntimeError> {
+        if let interpreter::Value::Number(n1) = &arguments[0] {
+            if let interpreter::Value::Number(n2) = &arguments[1] {
+                return Ok(interpreter::Value::Number(n1 + n2));
+            }
+        }
+        return Err(interpreter::RuntimeError {
+            err: "Type mismatch, sqrt expects number.".to_string(),
+            line: line,
+        });
     }
 
     #[test]
@@ -508,5 +566,33 @@ mod tests {
 
         eval!("num('42')", Number, 42.0);
         evalfails!("num('forty two')", "Could not convert string to number.");
+
+        eval!(
+            "reduce(fn(x,y) x*y end, map(num, ['1', '2', '3']))",
+            Number,
+            6.0
+        );
+
+        match lexer::scan("reduce(add, [1, 2, 3, 4, 5])") {
+            Ok(mut tokens) => {
+                assert_eq!(tokens.len(), 16);
+                let mut env = HashMap::new();
+                stdlib::register(&mut env);
+                env.insert("add".to_string(), interpreter::Value::RustFunction(add));
+                match parser::parse(&mut tokens) {
+                    Ok(ast) => match interpreter::eval(&env, &ast) {
+                        Ok(v) => match v {
+                            interpreter::Value::Number(n) => {
+                                assert_eq!(n, 15.0);
+                            }
+                            _ => assert!(false),
+                        },
+                        _ => assert!(false),
+                    },
+                    _ => assert!(false),
+                }
+            }
+            _ => assert!(false),
+        }
     }
 }
