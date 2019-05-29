@@ -1,0 +1,26 @@
+(* Find the value of the first triangle number to have over five hundred
+   divisors? *)
+let num.divisors := fn(n, cur, count)
+        if cur == sqrt(n) then
+            count + 1
+        elsif cur > sqrt(n) then
+            count
+        elsif cur | n then
+            $(n, cur + 1, count + 2)
+        else
+            $(n, cur + 1, count)
+        end
+    end
+    main := fn(n, last)
+        let nth.triangle := n + last
+        in
+            if num.divisors(nth.triangle, 0, 0) > 500 then
+                nth.triangle
+            else
+                $(n + 1, nth.triangle)
+            end
+        end
+    end
+in
+    main(1, 0)
+end

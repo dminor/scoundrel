@@ -1,0 +1,16 @@
+(* By considering the terms in the Fibonacci sequence whose values do not
+   exceed four million, find the sum of the even-valued terms *)
+let main := fn(a, b, sum)
+        if a > 4000000 then
+            sum
+        else
+            if a mod 2 == 0 then
+                $(b, a + b, sum + a)
+            else
+                $(b, a + b, sum)
+            end
+        end
+    end
+in
+    main(0, 1, 0)
+end

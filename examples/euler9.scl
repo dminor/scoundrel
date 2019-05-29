@@ -1,0 +1,20 @@
+(* Find the sum of the primes below 2000000 *)
+let main := fn(n, sum, next.prime)
+        let find.next.prime := fn(v)
+                if prime?(v) then
+                    v
+                else
+                    $(v + 1)
+                end
+            end
+        in
+            if next.prime >= n then
+                sum
+            else
+                $(n, sum + next.prime, find.next.prime(next.prime + 1))
+            end
+        end
+    end
+in
+    main(2000000, 5, 5)
+end

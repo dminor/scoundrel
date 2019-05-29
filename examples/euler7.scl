@@ -1,0 +1,69 @@
+(* Find the 10001st prime number *)
+
+(* My first attempt was to use the list of primes generated so far to test
+   for primality, but this was hopelessly slow. It did lead to finding a bug
+   in the stdlib prime? function. *)
+
+(*
+let main := fn(n, primes)
+        let prime? := fn(v, l)
+                if len(l) == 0 then
+                    true
+                else
+                    let p := car(l) in
+                        if p >= sqrt(v) + 1 then
+                            true
+                        elsif (p <> 1) and (p | v) then
+                            false
+                        else
+                            $(v, cdr(l))
+                        end
+                    end
+                end
+            end
+            next.prime := fn(v, l)
+                if prime?(v, l) then
+                    v
+                else
+                    $(v + 1, l)
+                end
+            end
+            last := fn(l)
+                    if len(l) == 1 then
+                        car(l)
+                    else
+                        $(cdr(l))
+                    end
+            end
+        in
+            if len(primes) == n then
+                last(primes)
+            else
+                $(n, primes + [next.prime(last(primes) + 1, primes)])
+            end
+        end
+    end
+in
+    main(101, [1, 2, 3])
+end
+*)
+
+let main := fn(n, nprimes, next.prime)
+        let find.next.prime := fn(v)
+                if prime?(v) then
+                    v
+                else
+                    $(v + 1)
+                end
+            end
+        in
+            if nprimes == n then
+                next.prime
+            else
+                $(n, nprimes + 1, find.next.prime(next.prime + 1))
+            end
+        end
+    end
+in
+    main(10001, 2, 3)
+end

@@ -163,3 +163,17 @@ below:
 * `reduce(fun, list)`: Return the value that results from applying fn cumulatively to each item of the list l, returning a single result. The function must take two arguments.
 * `sqrt(n)`: Return the square root of a number.
 * `str(v)`: Return the result of converting a value to a string.
+
+Examples
+--------
+
+A design goal for Scoundrel was to be able to use it to solve the first dozen
+Project Euler problems. This was to ensure that the language was not
+completely unusable. This turned out to be a fun exercise and uncovered some
+bugs both in the interpreter and in the standard library. The solutions are
+contained in the examples directory. They are mostly brute force. The
+interpreter is slow enough that it is often faster to run functions
+implemented in Rust a bunch of times rather than try to do something
+sophisticated in Scoundrel. You are not supposed to publish Project Euler
+solutions, but in this case I don't think having them here will deprive anyone
+of the enjoyment of solving them for themselves.

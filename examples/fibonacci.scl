@@ -1,0 +1,16 @@
+(* Return a list containing the first n fibonacci numbers *)
+let fib := fn(n)
+        let builder := fn(a, b, list)
+                if len(list) == n then
+                    list
+                else
+                    $(b, a + b, list + [a])
+                end
+            end
+        in
+            builder(1, 1, [])
+        end
+    end
+in
+    fib(12)
+end

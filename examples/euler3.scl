@@ -1,0 +1,15 @@
+(* Find the largest prime factor of the number 600851475143 *)
+let main := fn(cur, n, largest)
+        if cur > sqrt(n) then
+            largest
+        else
+            if (cur | n) and prime?(cur) then
+                $(cur + 1, n, cur)
+            else
+                $(cur + 1, n, largest)
+            end
+        end
+    end
+in
+    main(1, 600851475143, 1)
+end

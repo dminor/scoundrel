@@ -1,0 +1,21 @@
+(* Find the smallest positive number that is evenly divisible by all of the
+   numbers from 1 to 20 *)
+let main := fn(n)
+        let iter := fn(d, largest)
+                if d | largest then
+                    if d == n then
+                        largest
+                    else
+                        $(d + 1, largest)
+                    end
+                else
+                    $(2, largest + 1)
+                end
+            end
+        in
+            iter(2, n)
+        end
+    end
+in
+    main(20)
+end

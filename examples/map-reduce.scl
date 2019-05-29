@@ -1,0 +1,10 @@
+(* calculate sum of squares using map and reduce *)
+let square := fn(x)
+        x*x
+    end
+    sum := fn(x, y)
+        x + y
+    end
+in
+    reduce(sum, map(square, [1, 2, 3, 4, 5]))
+end

@@ -1,0 +1,38 @@
+(* Find the largest palindrome made from the product of two 3-digit numbers *)
+let reverse := fn(s)
+        let reverser := fn (s, e)
+                if not s then
+                    e
+                else
+                    $(cdr(s), car(s) + e)
+                end
+            end
+        in
+            reverser(s, '')
+        end
+    end
+    palindrome? := fn(n)
+        let s := str(n) in
+            s == reverse(s)
+        end
+    end
+    main := fn(a, b, largest)
+        let product := a*b
+            largest := if (product > largest) and palindrome?(product) then
+                            product
+                       else
+                            largest
+                       end
+        in
+            if b > 999 then
+                largest
+            elsif a > 999 then
+                $(100, b + 1, largest)
+            else
+                $(a + 1, b, largest)
+            end
+        end
+    end
+in
+    main(100, 100, 1)
+end

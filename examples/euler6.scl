@@ -1,0 +1,26 @@
+(* Find the difference between the sum of the squares of the first
+   one hundred natural numbers and the square of the sum. *)
+let main := fn(n)
+        let build.list := fn(l)
+                if len(l) == n then
+                    l
+                else
+                    $(l + [len(l) + 1])
+                end
+            end
+            sum.of.squares := fn(l)
+                reduce(fn(x,y) x + y end, map(fn(x) x*x end, l))
+            end
+            square.of.sum := fn(l)
+                let sum := reduce(fn(x,y) x + y end, l)
+                in
+                    sum*sum
+                end
+            end
+        in
+            square.of.sum(build.list([])) - sum.of.squares(build.list([]))
+        end
+    end
+in
+    main(100)
+end

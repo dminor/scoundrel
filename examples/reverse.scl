@@ -1,0 +1,16 @@
+(* reverse a string *)
+let reverse := fn (s)
+        let reverser := fn (s, e)
+                if not s then
+                    e
+                else
+                    $(cdr(s), car(s) + e)
+                end
+            end
+        in
+            reverser(s, '')
+        end
+    end
+in
+    reverse('hello world')
+end
