@@ -421,13 +421,13 @@ fn value(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
         Some(token) => match token.token {
             lexer::Token::False => Ok(Ast::Value(token)),
             lexer::Token::Function => {
-                let mut variables = Vec::<lexer::LexedToken>::new();
+                let mut params = Vec::<lexer::LexedToken>::new();
                 expect!(tokens, LeftParen, "Expected (.".to_string());
                 loop {
                     match tokens.pop_front() {
                         Some(token) => match token.token {
                             lexer::Token::Identifier(s) => {
-                                variables.push(lexer::LexedToken {
+                                params.push(lexer::LexedToken {
                                     token: lexer::Token::Identifier(s),
                                     line: token.line,
                                 });
@@ -454,7 +454,7 @@ fn value(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
                 match expression(tokens) {
                     Ok(body) => {
                         expect!(tokens, End, "Expected end.".to_string());
-                        return Ok(Ast::Function(variables, Box::new(body)));
+                        return Ok(Ast::Function(params, Box::new(body)));
                     }
                     Err(e) => Err(e),
                 }
@@ -1016,10 +1016,10 @@ mod tests {
                 assert_eq!(tokens.len(), 10);
                 match parser::parse(&mut tokens) {
                     Ok(ast) => match ast {
-                        parser::Ast::Function(args, body) => {
-                            assert_eq!(args.len(), 2);
-                            assert_eq!(args[0].token, lexer::Token::Identifier("x".to_string()));
-                            assert_eq!(args[1].token, lexer::Token::Identifier("y".to_string()));
+                        parser::Ast::Function(params, body) => {
+                            assert_eq!(params.len(), 2);
+                            assert_eq!(params[0].token, lexer::Token::Identifier("x".to_string()));
+                            assert_eq!(params[1].token, lexer::Token::Identifier("y".to_string()));
                             match *body {
                                 parser::Ast::BinaryOp(op, lhs, rhs) => {
                                     assert_eq!(op.token, lexer::Token::Plus);

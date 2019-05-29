@@ -286,35 +286,35 @@ pub fn eval<'a>(
 ) -> Result<Value<'a>, RuntimeError> {
     match ast {
         parser::Ast::BinaryOp(op, lhs, rhs) => binaryop(env, op, lhs, rhs),
-        parser::Ast::Function(args, body) => {
+        parser::Ast::Function(params, body) => {
             let fn_env = env.clone();
-            let mut variables = Vec::<String>::new();
-            for arg in args {
-                match &arg.token {
+            let mut resolved_params = Vec::<String>::new();
+            for param in params {
+                match &param.token {
                     lexer::Token::Identifier(s) => {
-                        variables.push(s.to_string());
+                        resolved_params.push(s.to_string());
                     }
                     _ => {
                         return Err(RuntimeError {
                             err: "Expected identifier.".to_string(),
-                            line: arg.line,
+                            line: param.line,
                         });
                     }
                 }
             }
-            Ok(Value::Function(fn_env, variables, body))
+            Ok(Value::Function(fn_env, resolved_params, body))
         }
         parser::Ast::FunctionCall(line, function, args) => match eval(&env, function) {
-            Ok(Value::Function(fn_env, variables, body)) => {
+            Ok(Value::Function(fn_env, params, body)) => {
                 let mut call_env = env.clone();
                 for kv in fn_env.iter() {
                     call_env.insert(kv.0.to_string(), kv.1.clone());
                 }
 
-                if variables.len() != args.len() {
+                if params.len() != args.len() {
                     let mut err =
                         "Wrong number of arguments in function call, expected ".to_string();
-                    err.push_str(&variables.len().to_string());
+                    err.push_str(&params.len().to_string());
                     err.push_str(" received ");
                     err.push_str(&args.len().to_string());
                     err.push('.');
@@ -324,10 +324,10 @@ pub fn eval<'a>(
                     });
                 }
 
-                for i in 0..variables.len() {
+                for i in 0..params.len() {
                     match eval(&env, &args[i]) {
                         Ok(v) => {
-                            call_env.insert(variables[i].clone(), v);
+                            call_env.insert(params[i].clone(), v);
                         }
                         Err(e) => {
                             return Err(e);
@@ -338,10 +338,10 @@ pub fn eval<'a>(
                     let result = eval(&call_env, body);
                     match result {
                         Ok(Value::Recur(args)) => {
-                            if variables.len() != args.len() {
+                            if params.len() != args.len() {
                                 let mut err =
                                     "Wrong number of arguments in recur, expected ".to_string();
-                                err.push_str(&variables.len().to_string());
+                                err.push_str(&params.len().to_string());
                                 err.push_str(" received ");
                                 err.push_str(&args.len().to_string());
                                 err.push('.');
@@ -351,8 +351,8 @@ pub fn eval<'a>(
                                 });
                             }
 
-                            for i in 0..variables.len() {
-                                call_env.insert(variables[i].clone(), args[i].clone());
+                            for i in 0..params.len() {
+                                call_env.insert(params[i].clone(), args[i].clone());
                             }
                         }
                         _ => return result,

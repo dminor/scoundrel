@@ -145,8 +145,8 @@ fn map(
     }
 
     match &arguments[0] {
-        interpreter::Value::Function(env, args, body) => {
-            if args.len() != 1 {
+        interpreter::Value::Function(env, params, body) => {
+            if params.len() != 1 {
                 return Err(interpreter::RuntimeError {
                     err: "Function passed to map should take one argument.".to_string(),
                     line: line,
@@ -157,7 +157,7 @@ fn map(
                     let mut result = LinkedList::new();
                     for item in list {
                         let mut env = env.clone();
-                        env.insert(args[0].clone(), item.clone());
+                        env.insert(params[0].clone(), item.clone());
                         match interpreter::eval(&env, body) {
                             Ok(v) => result.push_back(v),
                             Err(e) => {
@@ -285,8 +285,8 @@ fn reduce(
     }
 
     match &arguments[0] {
-        interpreter::Value::Function(env, args, body) => {
-            if args.len() != 2 {
+        interpreter::Value::Function(env, params, body) => {
+            if params.len() != 2 {
                 return Err(interpreter::RuntimeError {
                     err: "Function passed to reduce should take two arguments.".to_string(),
                     line: line,
@@ -300,8 +300,8 @@ fn reduce(
                             let mut result = v.clone();
                             for item in iter {
                                 let mut env = env.clone();
-                                env.insert(args[0].clone(), result);
-                                env.insert(args[1].clone(), item.clone());
+                                env.insert(params[0].clone(), result);
+                                env.insert(params[1].clone(), item.clone());
                                 match interpreter::eval(&env, body) {
                                     Ok(v) => result = v,
                                     Err(e) => {

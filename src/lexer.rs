@@ -494,13 +494,13 @@ mod tests {
             lexer::Token::False
         );
         scan!(
-            "fn x(arg)\n    arg*2\nend",
+            "fn x(param)\n    param*2\nend",
             lexer::Token::Function,
             lexer::Token::Identifier("x".to_string()),
             lexer::Token::LeftParen,
-            lexer::Token::Identifier("arg".to_string()),
+            lexer::Token::Identifier("param".to_string()),
             lexer::Token::RightParen,
-            lexer::Token::Identifier("arg".to_string()),
+            lexer::Token::Identifier("param".to_string()),
             lexer::Token::Star,
             lexer::Token::Number(2.0),
             lexer::Token::End
