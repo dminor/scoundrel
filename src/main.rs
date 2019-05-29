@@ -23,31 +23,31 @@ fn eval(filename: String, s: String) {
                     println!("{}", v);
                 }
                 Err(err) => {
-                    let line = min(lines.len(), err.line) - 1;
+                    let line = min(lines.len(), err.line);
                     let width = line.to_string().len() + 2;
                     println!("{}", err);
                     println!("{s:>width$}|", s = " ", width = width);
-                    println!(" {} | {}", line, lines[line]);
+                    println!(" {} | {}", line, lines[line - 1]);
                     println!("{s:>width$}|", s = " ", width = width);
                     println!("--> {}:{}", filename, line);
                 }
             },
             Err(err) => {
-                let line = min(lines.len(), err.line) - 1;
+                let line = min(lines.len(), err.line);
                 let width = line.to_string().len() + 2;
                 println!("{}", err);
                 println!("{s:>width$}|", s = " ", width = width);
-                println!(" {} | {}", line, lines[line]);
+                println!(" {} | {}", line, lines[line - 1]);
                 println!("{s:>width$}|", s = " ", width = width);
                 println!("--> {}:{}", filename, line);
             }
         },
         Err(err) => {
-            let line = min(lines.len(), err.line) - 1;
+            let line = min(lines.len(), err.line);
             let width = line.to_string().len() + 2;
             println!("{}", err);
             println!("{s:>width$}|", s = " ", width = width);
-            println!(" {} | {}", line, lines[line]);
+            println!(" {} | {}", line, lines[line - 1]);
             println!("{s:>width$}|", s = " ", width = width);
             println!("--> {}:{}", filename, line);
         }
