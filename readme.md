@@ -157,6 +157,7 @@ below:
 * `cdr(v)`: Return the elements of a list or string excluding the first.
 * `len(v)`: Return the length of a list or string.
 * `map(fun, list)`: Return the list that results from applying fn to each item of the list.
+* `nth(n, l)`: Return nth item of list.
 * `num(s)`: Convert the string to a number.
 * `prime?(n)`: Return true if the number is a prime.
 * `reduce(fun, list)`: Return the value that results from applying fn cumulatively to each item of the list l, returning a single result. The function must take two arguments.

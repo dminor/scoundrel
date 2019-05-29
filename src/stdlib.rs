@@ -198,6 +198,55 @@ fn map(
     }
 }
 
+fn nth(
+    line: usize,
+    arguments: Vec<interpreter::Value>,
+) -> Result<interpreter::Value, interpreter::RuntimeError> {
+    if arguments.len() != 2 {
+        return Err(interpreter::RuntimeError {
+            err: "nth takes two arguments.".to_string(),
+            line: line,
+        });
+    }
+
+    match &arguments[0] {
+        interpreter::Value::Number(n) => {
+            if *n < 0.0 {
+                return Err(interpreter::RuntimeError {
+                    err: "list index must be non-negative.".to_string(),
+                    line: line,
+                });
+            }
+
+            let index = *n as usize;
+            match &arguments[1] {
+                interpreter::Value::List(list) => match list.iter().nth(index) {
+                    Some(v) => Ok(v.clone()),
+                    _ => {
+                        let mut err = "index ".to_string();
+                        err.push_str(&index.to_string());
+                        err.push_str(" must be less than list length ");
+                        err.push_str(&list.len().to_string());
+                        err.push('.');
+                        return Err(interpreter::RuntimeError {
+                            err: err,
+                            line: line,
+                        });
+                    }
+                },
+                _ => Err(interpreter::RuntimeError {
+                    err: "Type mismatch, nth expects list as second argument.".to_string(),
+                    line: line,
+                }),
+            }
+        }
+        _ => Err(interpreter::RuntimeError {
+            err: "Type mismatch, map expects number as first argument.".to_string(),
+            line: line,
+        }),
+    }
+}
+
 fn num(
     line: usize,
     arguments: Vec<interpreter::Value>,
@@ -351,6 +400,7 @@ pub fn register(env: &mut HashMap<String, interpreter::Value>) {
     );
     env.insert("len".to_string(), interpreter::Value::RustFunction(len));
     env.insert("map".to_string(), interpreter::Value::RustFunction(map));
+    env.insert("nth".to_string(), interpreter::Value::RustFunction(nth));
     env.insert("num".to_string(), interpreter::Value::RustFunction(num));
     env.insert(
         "reduce".to_string(),
@@ -594,5 +644,9 @@ mod tests {
             }
             _ => assert!(false),
         }
+
+        eval!("nth(3, [1, 2, 3, 4, 5])", Number, 4.0);
+        evalfails!("nth(-1, [1, 2, 3])", "list index must be non-negative.");
+        evalfails!("nth(0, [])", "index 0 must be less than list length 0.");
     }
 }
