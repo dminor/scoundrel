@@ -107,8 +107,8 @@ fn binaryop<'a>(
                             if let Value::List(x) = lhs {
                                 if let Value::List(y) = rhs {
                                     let mut l = LinkedList::<Value>::new();
-                                    l.extend(x.clone());
-                                    l.extend(y.clone());
+                                    l.extend(x);
+                                    l.extend(y);
                                     return Ok(Value::List(l));
                                 } else {
                                     return Err(RuntimeError {
