@@ -16,7 +16,7 @@ unary          -> ( "!" | "-" ) unary | call
 call           -> value ( "(" ( value ,? )* ")" )?
 value          -> IDENTIFIER | NUMBER | STR | "false" | "true"
                   | "(" expression ")" | "[" ( expression )* "]"
-                  | "fn" "(" ( IDENTIFIER ,? ) * ")" in expression end
+                  | "fn" "(" ( IDENTIFIER ,? ) * ")" expression end
                   | "$" ( "(" ( value ,? )* ")" )?
 */
 
@@ -490,25 +490,9 @@ fn value(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
                 Ok(Ast::List(items))
             }
             lexer::Token::LeftParen => match expression(tokens) {
-                Ok(result) => match tokens.pop_front() {
-                    Some(next) => {
-                        match next.token {
-                            lexer::Token::RightParen => {}
-                            _ => {
-                                return Err(ParserError {
-                                    err: "Unexpected token when looking for ).".to_string(),
-                                    line: next.line,
-                                });
-                            }
-                        }
-                        Ok(result)
-                    }
-                    None => {
-                        return Err(ParserError {
-                            err: "Unexpected end of input when looking for ].".to_string(),
-                            line: token.line,
-                        });
-                    }
+                Ok(result) => {
+                    expect!(tokens, RightParen, "Expected ).".to_string());
+                    Ok(result)
                 },
                 Err(e) => Err(e),
             },
@@ -943,7 +927,7 @@ mod tests {
         parsefails!("", 0, "Unexpected end of input.");
         parsefails!("[", 1, "Unexpected end of input when looking for ].");
         parsefails!("(", 1, "Unexpected end of input.");
-        parsefails!("(2]", 3, "Unexpected token when looking for ).");
+        parsefails!("(2]", 3, "Expected ).");
         parsefails!("true or", 2, "Unexpected end of input.");
 
         match lexer::scan("if true then 1 elsif false then 2 else 3 end") {
