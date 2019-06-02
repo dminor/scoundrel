@@ -51,7 +51,7 @@ impl<'a> fmt::Display for Value<'a> {
 }
 
 macro_rules! maybe_apply_op {
-    ($in:tt, $out:tt, $r:ident, $lhs:ident, $rhs:ident, $rustop:tt, $err:expr, $op:ident) => (
+    ($in:tt, $out:tt, $lhs:ident, $rhs:ident, $rustop:tt, $err:expr, $op:ident) => (
         if let Value::$in(x) = $lhs {
             if let Value::$in(y) = $rhs {
                 return Ok(Value::$out(x $rustop y));
@@ -117,7 +117,7 @@ fn binaryop<'a>(
                                     });
                                 }
                             }
-                            maybe_apply_op!(Number, Number, result, lhs, rhs, +, "number", op);
+                            maybe_apply_op!(Number, Number, lhs, rhs, +, "number", op);
                             if let Value::Str(x) = lhs {
                                 if let Value::Str(y) = rhs {
                                     return Ok(Value::Str(x + &y));
@@ -130,13 +130,13 @@ fn binaryop<'a>(
                             }
                         }
                         lexer::Token::Minus => {
-                            maybe_apply_op!(Number, Number, result, lhs, rhs, -, "number", op);
+                            maybe_apply_op!(Number, Number, lhs, rhs, -, "number", op);
                         }
                         lexer::Token::Star => {
-                            maybe_apply_op!(Number, Number, result, lhs, rhs, *, "number", op);
+                            maybe_apply_op!(Number, Number, lhs, rhs, *, "number", op);
                         }
                         lexer::Token::Slash => {
-                            maybe_apply_op!(Number, Number, result, lhs, rhs, /, "number", op);
+                            maybe_apply_op!(Number, Number, lhs, rhs, /, "number", op);
                         }
                         lexer::Token::Divides => {
                             if let Value::Number(x) = lhs {
@@ -152,29 +152,29 @@ fn binaryop<'a>(
                             }
                         }
                         lexer::Token::Mod => {
-                            maybe_apply_op!(Number, Number, result, lhs, rhs, %, "number", op);
+                            maybe_apply_op!(Number, Number, lhs, rhs, %, "number", op);
                         }
                         lexer::Token::EqualEqual => {
-                            maybe_apply_op!(Boolean, Boolean, result, lhs, rhs, ==, "boolean", op);
-                            maybe_apply_op!(Number, Boolean, result, lhs, rhs, ==, "number", op);
-                            maybe_apply_op!(Str, Boolean, result, lhs, rhs, ==, "string", op);
+                            maybe_apply_op!(Boolean, Boolean, lhs, rhs, ==, "boolean", op);
+                            maybe_apply_op!(Number, Boolean, lhs, rhs, ==, "number", op);
+                            maybe_apply_op!(Str, Boolean, lhs, rhs, ==, "string", op);
                         }
                         lexer::Token::NotEqual => {
-                            maybe_apply_op!(Boolean, Boolean, result, lhs, rhs, !=, "boolean", op);
-                            maybe_apply_op!(Number, Boolean, result, lhs, rhs, !=, "number", op);
-                            maybe_apply_op!(Str, Boolean, result, lhs, rhs, !=, "string", op);
+                            maybe_apply_op!(Boolean, Boolean, lhs, rhs, !=, "boolean", op);
+                            maybe_apply_op!(Number, Boolean, lhs, rhs, !=, "number", op);
+                            maybe_apply_op!(Str, Boolean, lhs, rhs, !=, "string", op);
                         }
                         lexer::Token::Greater => {
-                            maybe_apply_op!(Number, Boolean, result, lhs, rhs, >, "number", op);
+                            maybe_apply_op!(Number, Boolean, lhs, rhs, >, "number", op);
                         }
                         lexer::Token::GreaterEqual => {
-                            maybe_apply_op!(Number, Boolean, result, lhs, rhs, >=, "number", op);
+                            maybe_apply_op!(Number, Boolean, lhs, rhs, >=, "number", op);
                         }
                         lexer::Token::Less => {
-                            maybe_apply_op!(Number, Boolean, result, lhs, rhs, <, "number", op);
+                            maybe_apply_op!(Number, Boolean, lhs, rhs, <, "number", op);
                         }
                         lexer::Token::LessEqual => {
-                            maybe_apply_op!(Number, Boolean, result, lhs, rhs, <=, "number", op);
+                            maybe_apply_op!(Number, Boolean, lhs, rhs, <=, "number", op);
                         }
                         _ => {
                             return Err(RuntimeError {
