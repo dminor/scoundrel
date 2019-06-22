@@ -11,12 +11,12 @@ mod stdlib;
 
 use std::io::{self, BufRead, Write};
 
-fn eval(filename: String, s: String) {
+fn eval(filename: &str, src: &str) {
     let mut env = HashMap::new();
     stdlib::register(&mut env);
 
-    let lines: Vec<&str> = s.split('\n').collect();
-    match lexer::scan(&s) {
+    let lines: Vec<&str> = src.split('\n').collect();
+    match lexer::scan(&src) {
         Ok(mut tokens) => match parser::parse(&mut tokens) {
             Ok(ast) => match interpreter::eval(&env, &ast) {
                 Ok(v) => {
@@ -57,11 +57,11 @@ fn eval(filename: String, s: String) {
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 {
-        let filename = args[1].to_string();
+        let filename = &args[1];
         let mut file = File::open(&filename)?;
         let mut program = String::new();
         file.read_to_string(&mut program)?;
-        eval(filename, program);
+        eval(&filename, &program);
         return Ok(());
     }
 
@@ -73,8 +73,8 @@ fn main() -> io::Result<()> {
 
     for line in stdin.lock().lines() {
         match line {
-            Ok(s) => {
-                eval("<stdin>".to_string(), s);
+            Ok(src) => {
+                eval("<stdin>", &src);
             }
             _ => break,
         }
