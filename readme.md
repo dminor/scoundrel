@@ -31,7 +31,7 @@ rapidly became boring.
 Keywords
 --------
 
-The following are reserved Keywords: *and*, *else*, *elsif*, *end*, *false*,
+The following are reserved keywords: *and*, *else*, *elsif*, *end*, *false*,
 *fn*, *if*, *in*, *let*, *mod*, *or*, *$*, *then* and *true*.
 
 
