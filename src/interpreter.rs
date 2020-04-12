@@ -23,7 +23,7 @@ pub struct RuntimeError {
 }
 
 impl fmt::Display for RuntimeError {
-    fn fmt<'a>(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "RuntimeError: {}", self.err)
     }
 }
@@ -54,6 +54,7 @@ macro_rules! maybe_apply_op {
     ($in:tt, $out:tt, $lhs:ident, $rhs:ident, $rustop:tt, $err:expr, $op:ident) => (
         if let Value::$in(x) = $lhs {
             if let Value::$in(y) = $rhs {
+                #[allow(clippy::float_cmp)]
                 return Ok(Value::$out(x $rustop y));
             } else {
                 let mut err = "Type mismatch, expected ".to_string();
@@ -79,23 +80,19 @@ fn binaryop<'a>(
             lexer::Token::And => {
                 if truthy(lhs) {
                     match eval(env, rhs) {
-                        Ok(rhs) => {
-                            return Ok(Value::Boolean(truthy(rhs)));
-                        }
+                        Ok(rhs) => Ok(Value::Boolean(truthy(rhs))),
                         Err(e) => Err(e),
                     }
                 } else {
-                    return Ok(Value::Boolean(false));
+                    Ok(Value::Boolean(false))
                 }
             }
             lexer::Token::Or => {
                 if truthy(lhs) {
-                    return Ok(Value::Boolean(true));
+                    Ok(Value::Boolean(true))
                 } else {
                     match eval(env, rhs) {
-                        Ok(rhs) => {
-                            return Ok(Value::Boolean(truthy(rhs)));
-                        }
+                        Ok(rhs) => Ok(Value::Boolean(truthy(rhs))),
                         Err(e) => Err(e),
                     }
                 }
@@ -144,10 +141,7 @@ fn binaryop<'a>(
                                     return Ok(Value::Boolean(y % x == 0.0));
                                 } else {
                                     let err = "Type mismatch, expected number".to_string();
-                                    return Err(RuntimeError {
-                                        err: err,
-                                        line: op.line,
-                                    });
+                                    return Err(RuntimeError { err, line: op.line });
                                 }
                             }
                         }
@@ -186,10 +180,7 @@ fn binaryop<'a>(
                     let mut err = "Invalid arguments to ".to_string();
                     err.push_str(&op.token.to_string());
                     err.push('.');
-                    return Err(RuntimeError {
-                        err: err,
-                        line: op.line,
-                    });
+                    Err(RuntimeError { err, line: op.line })
                 }
                 Err(e) => Err(e),
             },
@@ -202,29 +193,11 @@ fn truthy(value: Value) -> bool {
     match value {
         Value::Boolean(b) => b,
         Value::Function(_, _, _) => true,
-        Value::List(list) => {
-            if list.len() == 0 {
-                false
-            } else {
-                true
-            }
-        }
-        Value::Number(n) => {
-            if n == 0.0 {
-                false
-            } else {
-                true
-            }
-        }
+        Value::List(list) => !list.is_empty(),
+        Value::Number(n) => n != 0.0,
         Value::Recur(_) => true,
         Value::RustFunction(_) => true,
-        Value::Str(s) => {
-            if s.len() == 0 {
-                false
-            } else {
-                true
-            }
-        }
+        Value::Str(s) => !s.is_empty(),
     }
 }
 
@@ -268,7 +241,7 @@ fn value<'a>(
                 err.push_str(s);
                 err.push('.');
                 Err(RuntimeError {
-                    err: err,
+                    err,
                     line: token.line,
                 })
             }
@@ -318,10 +291,7 @@ pub fn eval<'a>(
                     err.push_str(" received ");
                     err.push_str(&args.len().to_string());
                     err.push('.');
-                    return Err(RuntimeError {
-                        err: err,
-                        line: *line,
-                    });
+                    return Err(RuntimeError { err, line: *line });
                 }
 
                 for i in 0..params.len() {
@@ -345,10 +315,7 @@ pub fn eval<'a>(
                                 err.push_str(" received ");
                                 err.push_str(&args.len().to_string());
                                 err.push('.');
-                                return Err(RuntimeError {
-                                    err: err,
-                                    line: *line,
-                                });
+                                return Err(RuntimeError { err, line: *line });
                             }
 
                             for i in 0..params.len() {
@@ -361,8 +328,8 @@ pub fn eval<'a>(
             }
             Ok(Value::RustFunction(func)) => {
                 let mut func_args = Vec::new();
-                for i in 0..args.len() {
-                    match eval(&env, &args[i]) {
+                for arg in args {
+                    match eval(&env, &arg) {
                         Ok(v) => {
                             func_args.push(v);
                         }
@@ -374,12 +341,10 @@ pub fn eval<'a>(
                 func(*line, func_args)
             }
             Err(e) => Err(e),
-            _ => {
-                return Err(RuntimeError {
-                    err: "Attempt to call non-function.".to_string(),
-                    line: *line,
-                });
-            }
+            _ => Err(RuntimeError {
+                err: "Attempt to call non-function.".to_string(),
+                line: *line,
+            }),
         },
         parser::Ast::Let(variables, expr) => {
             // TODO: maintaining a stack of environments would
@@ -436,10 +401,8 @@ pub fn eval<'a>(
                 }
             }
             match eval(env, then) {
-                Ok(v) => return Ok(v),
-                Err(e) => {
-                    return Err(e);
-                }
+                Ok(v) => Ok(v),
+                Err(e) => Err(e),
             }
         }
         parser::Ast::Recur(args) => {

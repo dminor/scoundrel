@@ -121,242 +121,226 @@ pub fn scan(src: &str) -> Result<LinkedList<LexedToken>, LexerError> {
     let mut line = 1;
     let mut tokens = LinkedList::<LexedToken>::new();
     let mut chars = src.chars().peekable();
-    loop {
-        match chars.next() {
-            Some(c) => match c {
-                '[' => {
-                    push_token!(Token::LeftBracket, tokens, line);
-                }
-                ']' => {
-                    push_token!(Token::RightBracket, tokens, line);
-                }
-                '(' => match chars.peek() {
-                    Some(c) => {
-                        if *c == '*' {
-                            loop {
-                                match chars.next() {
-                                    Some(c) => match c {
-                                        '*' => match chars.peek() {
-                                            Some(')') => {
-                                                chars.next();
-                                                break;
-                                            }
-                                            _ => {}
-                                        },
-                                        '\n' => {
-                                            line += 1;
+    while let Some(c) = chars.next() {
+        match c {
+            '[' => {
+                push_token!(Token::LeftBracket, tokens, line);
+            }
+            ']' => {
+                push_token!(Token::RightBracket, tokens, line);
+            }
+            '(' => match chars.peek() {
+                Some(c) => {
+                    if *c == '*' {
+                        loop {
+                            match chars.next() {
+                                Some(c) => match c {
+                                    '*' => {
+                                        if let Some(')') = chars.peek() {
+                                            chars.next();
+                                            break;
                                         }
-                                        _ => {}
-                                    },
-                                    None => {
-                                        return Err(LexerError {
-                                            err: "Unexpected end of input while scanning comment"
-                                                .to_string(),
-                                            line: line,
-                                        });
                                     }
-                                }
-                            }
-                        } else {
-                            push_token!(Token::LeftParen, tokens, line);
-                        }
-                    }
-                    None => {
-                        push_token!(Token::LeftParen, tokens, line);
-                    }
-                },
-                ')' => {
-                    push_token!(Token::RightParen, tokens, line);
-                }
-                ':' => match chars.next() {
-                    Some(c) => {
-                        if c == '=' {
-                            push_token!(Token::ColonEqual, tokens, line);
-                        } else {
-                            return Err(LexerError {
-                                err: "Unexpected token while parsing :=".to_string(),
-                                line: line,
-                            });
-                        }
-                    }
-                    _ => {
-                        return Err(LexerError {
-                            err: "Unexpected end of input while parsing :=".to_string(),
-                            line: line,
-                        });
-                    }
-                },
-                ',' => {
-                    push_token!(Token::Comma, tokens, line);
-                }
-                '-' => {
-                    push_token!(Token::Minus, tokens, line);
-                }
-                '+' => {
-                    push_token!(Token::Plus, tokens, line);
-                }
-                '/' => {
-                    push_token!(Token::Slash, tokens, line);
-                }
-                '*' => {
-                    push_token!(Token::Star, tokens, line);
-                }
-                '|' => {
-                    push_token!(Token::Divides, tokens, line);
-                }
-                '=' => match chars.peek() {
-                    Some(c) => {
-                        if *c == '=' {
-                            push_token!(Token::EqualEqual, tokens, line);
-                            chars.next();
-                        } else {
-                            return Err(LexerError {
-                                err: "Unexpected end of input while parsing ==".to_string(),
-                                line: line,
-                            });
-                        }
-                    }
-                    None => {}
-                },
-                '>' => match chars.peek() {
-                    Some(c) => {
-                        if *c == '=' {
-                            push_token!(Token::GreaterEqual, tokens, line);
-                            chars.next();
-                        } else {
-                            push_token!(Token::Greater, tokens, line);
-                        }
-                    }
-                    None => {
-                        push_token!(Token::Greater, tokens, line);
-                    }
-                },
-                '<' => match chars.peek() {
-                    Some(c) => {
-                        if *c == '=' {
-                            push_token!(Token::LessEqual, tokens, line);
-                            chars.next();
-                        } else if *c == '>' {
-                            push_token!(Token::NotEqual, tokens, line);
-                            chars.next();
-                        } else {
-                            push_token!(Token::Less, tokens, line);
-                        }
-                    }
-                    None => {
-                        push_token!(Token::Less, tokens, line);
-                    }
-                },
-                '\'' => {
-                    let mut v = Vec::<char>::new();
-                    loop {
-                        match chars.next() {
-                            Some(c) => match c {
-                                '\'' => {
-                                    push_token!(Token::Str(v.into_iter().collect()), tokens, line);
-                                    break;
-                                }
-                                '\n' => {
+                                    '\n' => {
+                                        line += 1;
+                                    }
+                                    _ => {}
+                                },
+                                None => {
                                     return Err(LexerError {
-                                        err: "Unexpected end of line while scanning string"
+                                        err: "Unexpected end of input while scanning comment"
                                             .to_string(),
-                                        line: line,
+                                        line,
                                     });
                                 }
-                                _ => v.push(c),
-                            },
-                            None => {
-                                return Err(LexerError {
-                                    err: "Unexpected end of input while scanning string"
-                                        .to_string(),
-                                    line: line,
-                                });
                             }
                         }
+                    } else {
+                        push_token!(Token::LeftParen, tokens, line);
                     }
                 }
-                '\n' => {
-                    line += 1;
-                    continue;
-                }
-                ' ' => {}
-                _ => {
-                    let mut v = vec![c];
-                    loop {
-                        match chars.peek() {
-                            Some(c) => {
-                                if c.is_alphanumeric() || *c == '.' || *c == '?' {
-                                    v.push(*c);
-                                    chars.next();
-                                } else {
-                                    break;
-                                }
-                            }
-                            None => {
-                                break;
-                            }
-                        }
-                    }
-                    let s: String = v.into_iter().collect();
-                    match &s[..] {
-                        "and" => {
-                            push_token!(Token::And, tokens, line);
-                        }
-                        "else" => {
-                            push_token!(Token::Else, tokens, line);
-                        }
-                        "elsif" => {
-                            push_token!(Token::Elsif, tokens, line);
-                        }
-                        "end" => {
-                            push_token!(Token::End, tokens, line);
-                        }
-                        "false" => {
-                            push_token!(Token::False, tokens, line);
-                        }
-                        "fn" => {
-                            push_token!(Token::Function, tokens, line);
-                        }
-                        "if" => {
-                            push_token!(Token::If, tokens, line);
-                        }
-                        "in" => {
-                            push_token!(Token::In, tokens, line);
-                        }
-                        "let" => {
-                            push_token!(Token::Let, tokens, line);
-                        }
-                        "mod" => {
-                            push_token!(Token::Mod, tokens, line);
-                        }
-                        "not" => {
-                            push_token!(Token::Not, tokens, line);
-                        }
-                        "or" => {
-                            push_token!(Token::Or, tokens, line);
-                        }
-                        "$" => {
-                            push_token!(Token::Recur, tokens, line);
-                        }
-                        "then" => {
-                            push_token!(Token::Then, tokens, line);
-                        }
-                        "true" => {
-                            push_token!(Token::True, tokens, line);
-                        }
-                        _ => match s.parse::<f64>() {
-                            Ok(n) => {
-                                push_token!(Token::Number(n), tokens, line);
-                            }
-                            _ => {
-                                push_token!(Token::Identifier(s.to_string()), tokens, line);
-                            }
-                        },
-                    }
+                None => {
+                    push_token!(Token::LeftParen, tokens, line);
                 }
             },
-            None => {
-                break;
+            ')' => {
+                push_token!(Token::RightParen, tokens, line);
+            }
+            ':' => match chars.next() {
+                Some(c) => {
+                    if c == '=' {
+                        push_token!(Token::ColonEqual, tokens, line);
+                    } else {
+                        return Err(LexerError {
+                            err: "Unexpected token while parsing :=".to_string(),
+                            line,
+                        });
+                    }
+                }
+                _ => {
+                    return Err(LexerError {
+                        err: "Unexpected end of input while parsing :=".to_string(),
+                        line,
+                    });
+                }
+            },
+            ',' => {
+                push_token!(Token::Comma, tokens, line);
+            }
+            '-' => {
+                push_token!(Token::Minus, tokens, line);
+            }
+            '+' => {
+                push_token!(Token::Plus, tokens, line);
+            }
+            '/' => {
+                push_token!(Token::Slash, tokens, line);
+            }
+            '*' => {
+                push_token!(Token::Star, tokens, line);
+            }
+            '|' => {
+                push_token!(Token::Divides, tokens, line);
+            }
+            '=' => {
+                if let Some(c) = chars.peek() {
+                    if *c == '=' {
+                        push_token!(Token::EqualEqual, tokens, line);
+                        chars.next();
+                    } else {
+                        return Err(LexerError {
+                            err: "Unexpected end of input while parsing ==".to_string(),
+                            line,
+                        });
+                    }
+                }
+            }
+            '>' => match chars.peek() {
+                Some(c) => {
+                    if *c == '=' {
+                        push_token!(Token::GreaterEqual, tokens, line);
+                        chars.next();
+                    } else {
+                        push_token!(Token::Greater, tokens, line);
+                    }
+                }
+                None => {
+                    push_token!(Token::Greater, tokens, line);
+                }
+            },
+            '<' => match chars.peek() {
+                Some(c) => {
+                    if *c == '=' {
+                        push_token!(Token::LessEqual, tokens, line);
+                        chars.next();
+                    } else if *c == '>' {
+                        push_token!(Token::NotEqual, tokens, line);
+                        chars.next();
+                    } else {
+                        push_token!(Token::Less, tokens, line);
+                    }
+                }
+                None => {
+                    push_token!(Token::Less, tokens, line);
+                }
+            },
+            '\'' => {
+                let mut v = Vec::<char>::new();
+                loop {
+                    match chars.next() {
+                        Some(c) => match c {
+                            '\'' => {
+                                push_token!(Token::Str(v.into_iter().collect()), tokens, line);
+                                break;
+                            }
+                            '\n' => {
+                                return Err(LexerError {
+                                    err: "Unexpected end of line while scanning string".to_string(),
+                                    line,
+                                });
+                            }
+                            _ => v.push(c),
+                        },
+                        None => {
+                            return Err(LexerError {
+                                err: "Unexpected end of input while scanning string".to_string(),
+                                line,
+                            });
+                        }
+                    }
+                }
+            }
+            '\n' => {
+                line += 1;
+                continue;
+            }
+            ' ' => {}
+            _ => {
+                let mut v = vec![c];
+                while let Some(c) = chars.peek() {
+                    if c.is_alphanumeric() || *c == '.' || *c == '?' {
+                        v.push(*c);
+                        chars.next();
+                    } else {
+                        break;
+                    }
+                }
+                let s: String = v.into_iter().collect();
+                match &s[..] {
+                    "and" => {
+                        push_token!(Token::And, tokens, line);
+                    }
+                    "else" => {
+                        push_token!(Token::Else, tokens, line);
+                    }
+                    "elsif" => {
+                        push_token!(Token::Elsif, tokens, line);
+                    }
+                    "end" => {
+                        push_token!(Token::End, tokens, line);
+                    }
+                    "false" => {
+                        push_token!(Token::False, tokens, line);
+                    }
+                    "fn" => {
+                        push_token!(Token::Function, tokens, line);
+                    }
+                    "if" => {
+                        push_token!(Token::If, tokens, line);
+                    }
+                    "in" => {
+                        push_token!(Token::In, tokens, line);
+                    }
+                    "let" => {
+                        push_token!(Token::Let, tokens, line);
+                    }
+                    "mod" => {
+                        push_token!(Token::Mod, tokens, line);
+                    }
+                    "not" => {
+                        push_token!(Token::Not, tokens, line);
+                    }
+                    "or" => {
+                        push_token!(Token::Or, tokens, line);
+                    }
+                    "$" => {
+                        push_token!(Token::Recur, tokens, line);
+                    }
+                    "then" => {
+                        push_token!(Token::Then, tokens, line);
+                    }
+                    "true" => {
+                        push_token!(Token::True, tokens, line);
+                    }
+                    _ => match s.parse::<f64>() {
+                        Ok(n) => {
+                            push_token!(Token::Number(n), tokens, line);
+                        }
+                        _ => {
+                            push_token!(Token::Identifier(s.to_string()), tokens, line);
+                        }
+                    },
+                }
             }
         }
     }

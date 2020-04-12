@@ -9,7 +9,7 @@ fn car(
     if arguments.len() != 1 {
         return Err(interpreter::RuntimeError {
             err: "car takes one argument.".to_string(),
-            line: line,
+            line,
         });
     }
 
@@ -18,19 +18,19 @@ fn car(
             Some(v) => Ok(v.clone()),
             _ => Err(interpreter::RuntimeError {
                 err: "car called on empty list.".to_string(),
-                line: line,
+                line,
             }),
         },
         interpreter::Value::Str(s) => match s.chars().nth(0) {
             Some(v) => Ok(interpreter::Value::Str(v.to_string())),
             _ => Err(interpreter::RuntimeError {
                 err: "car called on empty string.".to_string(),
-                line: line,
+                line,
             }),
         },
         _ => Err(interpreter::RuntimeError {
             err: "Type mismatch, car expects list or string.".to_string(),
-            line: line,
+            line,
         }),
     }
 }
@@ -42,7 +42,7 @@ fn cdr(
     if arguments.len() != 1 {
         return Err(interpreter::RuntimeError {
             err: "car takes one argument.".to_string(),
-            line: line,
+            line,
         });
     }
 
@@ -53,29 +53,30 @@ fn cdr(
                 Some(_) => Ok(interpreter::Value::List(result)),
                 _ => Err(interpreter::RuntimeError {
                     err: "cdr called on empty list.".to_string(),
-                    line: line,
+                    line,
                 }),
             }
         }
         interpreter::Value::Str(s) => {
-            if s.len() > 0 {
+            if !s.is_empty() {
                 let mut substr = s.chars();
                 substr.next();
-                return Ok(interpreter::Value::Str(substr.collect()));
+                Ok(interpreter::Value::Str(substr.collect()))
             } else {
-                return Err(interpreter::RuntimeError {
+                Err(interpreter::RuntimeError {
                     err: "cdr called on empty string.".to_string(),
-                    line: line,
-                });
+                    line,
+                })
             }
         }
         _ => Err(interpreter::RuntimeError {
             err: "Type mismatch, cdr expects list or string.".to_string(),
-            line: line,
+            line,
         }),
     }
 }
 
+#[allow(clippy::float_cmp)]
 fn is_prime(
     line: usize,
     arguments: Vec<interpreter::Value>,
@@ -83,7 +84,7 @@ fn is_prime(
     if arguments.len() != 1 {
         return Err(interpreter::RuntimeError {
             err: "prime? takes one argument.".to_string(),
-            line: line,
+            line,
         });
     }
 
@@ -107,7 +108,7 @@ fn is_prime(
         }
         _ => Err(interpreter::RuntimeError {
             err: "Type mismatch, prime? expects number.".to_string(),
-            line: line,
+            line,
         }),
     }
 }
@@ -119,7 +120,7 @@ fn len(
     if arguments.len() != 1 {
         return Err(interpreter::RuntimeError {
             err: "len takes one argument.".to_string(),
-            line: line,
+            line,
         });
     }
 
@@ -128,7 +129,7 @@ fn len(
         interpreter::Value::Str(s) => Ok(interpreter::Value::Number(s.len() as f64)),
         _ => Err(interpreter::RuntimeError {
             err: "Type mismatch, len expects string or list.".to_string(),
-            line: line,
+            line,
         }),
     }
 }
@@ -140,7 +141,7 @@ fn map(
     if arguments.len() != 2 {
         return Err(interpreter::RuntimeError {
             err: "map takes two arguments.".to_string(),
-            line: line,
+            line,
         });
     }
 
@@ -149,7 +150,7 @@ fn map(
             if params.len() != 1 {
                 return Err(interpreter::RuntimeError {
                     err: "Function passed to map should take one argument.".to_string(),
-                    line: line,
+                    line,
                 });
             }
             match &arguments[1] {
@@ -165,11 +166,11 @@ fn map(
                             }
                         }
                     }
-                    return Ok(interpreter::Value::List(result));
+                    Ok(interpreter::Value::List(result))
                 }
                 _ => Err(interpreter::RuntimeError {
                     err: "Type mismatch, map expects list as second argument.".to_string(),
-                    line: line,
+                    line,
                 }),
             }
         }
@@ -184,16 +185,16 @@ fn map(
                         }
                     }
                 }
-                return Ok(interpreter::Value::List(result));
+                Ok(interpreter::Value::List(result))
             }
             _ => Err(interpreter::RuntimeError {
                 err: "Type mismatch, map expects list as second argument.".to_string(),
-                line: line,
+                line,
             }),
         },
         _ => Err(interpreter::RuntimeError {
             err: "Type mismatch, map expects function as first argument.".to_string(),
-            line: line,
+            line,
         }),
     }
 }
@@ -205,7 +206,7 @@ fn nth(
     if arguments.len() != 2 {
         return Err(interpreter::RuntimeError {
             err: "nth takes two arguments.".to_string(),
-            line: line,
+            line,
         });
     }
 
@@ -214,7 +215,7 @@ fn nth(
             if *n < 0.0 {
                 return Err(interpreter::RuntimeError {
                     err: "list index must be non-negative.".to_string(),
-                    line: line,
+                    line,
                 });
             }
 
@@ -228,21 +229,18 @@ fn nth(
                         err.push_str(" must be less than list length ");
                         err.push_str(&list.len().to_string());
                         err.push('.');
-                        return Err(interpreter::RuntimeError {
-                            err: err,
-                            line: line,
-                        });
+                        Err(interpreter::RuntimeError { err, line })
                     }
                 },
                 _ => Err(interpreter::RuntimeError {
                     err: "Type mismatch, nth expects list as second argument.".to_string(),
-                    line: line,
+                    line,
                 }),
             }
         }
         _ => Err(interpreter::RuntimeError {
             err: "Type mismatch, map expects number as first argument.".to_string(),
-            line: line,
+            line,
         }),
     }
 }
@@ -254,7 +252,7 @@ fn num(
     if arguments.len() != 1 {
         return Err(interpreter::RuntimeError {
             err: "num takes one argument.".to_string(),
-            line: line,
+            line,
         });
     }
 
@@ -263,12 +261,12 @@ fn num(
             Ok(n) => Ok(interpreter::Value::Number(n)),
             _ => Err(interpreter::RuntimeError {
                 err: "Could not convert string to number.".to_string(),
-                line: line,
+                line,
             }),
         },
         _ => Err(interpreter::RuntimeError {
             err: "Type mismatch, num expects string.".to_string(),
-            line: line,
+            line,
         }),
     }
 }
@@ -280,7 +278,7 @@ fn reduce(
     if arguments.len() != 2 {
         return Err(interpreter::RuntimeError {
             err: "reduce takes two arguments.".to_string(),
-            line: line,
+            line,
         });
     }
 
@@ -289,7 +287,7 @@ fn reduce(
             if params.len() != 2 {
                 return Err(interpreter::RuntimeError {
                     err: "Function passed to reduce should take two arguments.".to_string(),
-                    line: line,
+                    line,
                 });
             }
             match &arguments[1] {
@@ -309,17 +307,17 @@ fn reduce(
                                     }
                                 }
                             }
-                            return Ok(result);
+                            Ok(result)
                         }
                         _ => Err(interpreter::RuntimeError {
                             err: "reduce applied to empty list.".to_string(),
-                            line: line,
+                            line,
                         }),
                     }
                 }
                 _ => Err(interpreter::RuntimeError {
                     err: "Type mismatch, reduce expects list as second argument.".to_string(),
-                    line: line,
+                    line,
                 }),
             }
         }
@@ -337,22 +335,22 @@ fn reduce(
                                 }
                             }
                         }
-                        return Ok(result);
+                        Ok(result)
                     }
                     _ => Err(interpreter::RuntimeError {
                         err: "reduce applied to empty list.".to_string(),
-                        line: line,
+                        line,
                     }),
                 }
             }
             _ => Err(interpreter::RuntimeError {
                 err: "Type mismatch, reduce expects list as second argument.".to_string(),
-                line: line,
+                line,
             }),
         },
         _ => Err(interpreter::RuntimeError {
             err: "Type mismatch, reduce expects function as first argument.".to_string(),
-            line: line,
+            line,
         }),
     }
 }
@@ -364,7 +362,7 @@ fn sqrt(
     if arguments.len() != 1 {
         return Err(interpreter::RuntimeError {
             err: "sqrt takes one argument.".to_string(),
-            line: line,
+            line,
         });
     }
 
@@ -372,7 +370,7 @@ fn sqrt(
         interpreter::Value::Number(n) => Ok(interpreter::Value::Number(n.sqrt())),
         _ => Err(interpreter::RuntimeError {
             err: "Type mismatch, sqrt expects number.".to_string(),
-            line: line,
+            line,
         }),
     }
 }
@@ -384,7 +382,7 @@ fn to_str(
     if arguments.len() != 1 {
         return Err(interpreter::RuntimeError {
             err: "str takes one argument.".to_string(),
-            line: line,
+            line,
         });
     }
 
@@ -469,7 +467,7 @@ mod tests {
         }
         return Err(interpreter::RuntimeError {
             err: "Type mismatch, sqrt expects number.".to_string(),
-            line: line,
+            line,
         });
     }
 

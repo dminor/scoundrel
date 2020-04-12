@@ -108,7 +108,7 @@ fn expression(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserE
                         None => {
                             return Err(ParserError {
                                 err: "Unexpected end of input.".to_string(),
-                                line: line,
+                                line,
                             });
                         }
                     }
@@ -116,19 +116,17 @@ fn expression(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserE
                 match expression(tokens) {
                     Ok(body) => {
                         expect!(tokens, End, "Expected end.".to_string());
-                        return Ok(Ast::Let(variables, Box::new(body)));
+                        Ok(Ast::Let(variables, Box::new(body)))
                     }
                     Err(e) => Err(e),
                 }
             }
             _ => conditional(tokens),
         },
-        None => {
-            return Err(ParserError {
-                err: "Unexpected end of input.".to_string(),
-                line: usize::max_value(),
-            });
-        }
+        None => Err(ParserError {
+            err: "Unexpected end of input.".to_string(),
+            line: usize::max_value(),
+        }),
     }
 }
 
@@ -180,7 +178,7 @@ fn conditional(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, Parser
                         None => {
                             return Err(ParserError {
                                 err: "Unexpected end of input.".to_string(),
-                                line: line,
+                                line,
                             });
                         }
                     }
@@ -188,12 +186,10 @@ fn conditional(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, Parser
             }
             _ => equality(tokens),
         },
-        None => {
-            return Err(ParserError {
-                err: "Unexpected end of input.".to_string(),
-                line: usize::max_value(),
-            });
-        }
+        None => Err(ParserError {
+            err: "Unexpected end of input.".to_string(),
+            line: usize::max_value(),
+        }),
     }
 }
 
@@ -201,27 +197,22 @@ fn equality(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserErr
     let lhs = comparison(tokens);
     match lhs {
         Ok(mut lhs) => {
-            loop {
-                match tokens.front() {
-                    Some(peek) => match peek.token {
-                        lexer::Token::EqualEqual | lexer::Token::NotEqual => {
-                            if let Some(token) = tokens.pop_front() {
-                                let rhs = comparison(tokens);
-                                match rhs {
-                                    Ok(rhs) => {
-                                        lhs = Ast::BinaryOp(token, Box::new(lhs), Box::new(rhs));
-                                    }
-                                    Err(e) => {
-                                        return Err(e);
-                                    }
+            while let Some(peek) = tokens.front() {
+                match peek.token {
+                    lexer::Token::EqualEqual | lexer::Token::NotEqual => {
+                        if let Some(token) = tokens.pop_front() {
+                            let rhs = comparison(tokens);
+                            match rhs {
+                                Ok(rhs) => {
+                                    lhs = Ast::BinaryOp(token, Box::new(lhs), Box::new(rhs));
+                                }
+                                Err(e) => {
+                                    return Err(e);
                                 }
                             }
                         }
-                        _ => {
-                            break;
-                        }
-                    },
-                    None => {
+                    }
+                    _ => {
                         break;
                     }
                 }
@@ -236,30 +227,25 @@ fn comparison(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserE
     let lhs = addition(tokens);
     match lhs {
         Ok(mut lhs) => {
-            loop {
-                match tokens.front() {
-                    Some(peek) => match peek.token {
-                        lexer::Token::Greater
-                        | lexer::Token::GreaterEqual
-                        | lexer::Token::Less
-                        | lexer::Token::LessEqual => {
-                            if let Some(token) = tokens.pop_front() {
-                                let rhs = addition(tokens);
-                                match rhs {
-                                    Ok(rhs) => {
-                                        lhs = Ast::BinaryOp(token, Box::new(lhs), Box::new(rhs));
-                                    }
-                                    Err(e) => {
-                                        return Err(e);
-                                    }
+            while let Some(peek) = tokens.front() {
+                match peek.token {
+                    lexer::Token::Greater
+                    | lexer::Token::GreaterEqual
+                    | lexer::Token::Less
+                    | lexer::Token::LessEqual => {
+                        if let Some(token) = tokens.pop_front() {
+                            let rhs = addition(tokens);
+                            match rhs {
+                                Ok(rhs) => {
+                                    lhs = Ast::BinaryOp(token, Box::new(lhs), Box::new(rhs));
+                                }
+                                Err(e) => {
+                                    return Err(e);
                                 }
                             }
                         }
-                        _ => {
-                            break;
-                        }
-                    },
-                    None => {
+                    }
+                    _ => {
                         break;
                     }
                 }
@@ -274,27 +260,22 @@ fn addition(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserErr
     let lhs = multiplication(tokens);
     match lhs {
         Ok(mut lhs) => {
-            loop {
-                match tokens.front() {
-                    Some(peek) => match peek.token {
-                        lexer::Token::Plus | lexer::Token::Minus | lexer::Token::Or => {
-                            if let Some(token) = tokens.pop_front() {
-                                let rhs = multiplication(tokens);
-                                match rhs {
-                                    Ok(rhs) => {
-                                        lhs = Ast::BinaryOp(token, Box::new(lhs), Box::new(rhs));
-                                    }
-                                    Err(e) => {
-                                        return Err(e);
-                                    }
+            while let Some(peek) = tokens.front() {
+                match peek.token {
+                    lexer::Token::Plus | lexer::Token::Minus | lexer::Token::Or => {
+                        if let Some(token) = tokens.pop_front() {
+                            let rhs = multiplication(tokens);
+                            match rhs {
+                                Ok(rhs) => {
+                                    lhs = Ast::BinaryOp(token, Box::new(lhs), Box::new(rhs));
+                                }
+                                Err(e) => {
+                                    return Err(e);
                                 }
                             }
                         }
-                        _ => {
-                            break;
-                        }
-                    },
-                    None => {
+                    }
+                    _ => {
                         break;
                     }
                 }
@@ -309,31 +290,26 @@ fn multiplication(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, Par
     let lhs = unary(tokens);
     match lhs {
         Ok(mut lhs) => {
-            loop {
-                match tokens.front() {
-                    Some(peek) => match peek.token {
-                        lexer::Token::Slash
-                        | lexer::Token::Star
-                        | lexer::Token::Divides
-                        | lexer::Token::Mod
-                        | lexer::Token::And => {
-                            if let Some(token) = tokens.pop_front() {
-                                let rhs = unary(tokens);
-                                match rhs {
-                                    Ok(rhs) => {
-                                        lhs = Ast::BinaryOp(token, Box::new(lhs), Box::new(rhs));
-                                    }
-                                    Err(e) => {
-                                        return Err(e);
-                                    }
+            while let Some(peek) = tokens.front() {
+                match peek.token {
+                    lexer::Token::Slash
+                    | lexer::Token::Star
+                    | lexer::Token::Divides
+                    | lexer::Token::Mod
+                    | lexer::Token::And => {
+                        if let Some(token) = tokens.pop_front() {
+                            let rhs = unary(tokens);
+                            match rhs {
+                                Ok(rhs) => {
+                                    lhs = Ast::BinaryOp(token, Box::new(lhs), Box::new(rhs));
+                                }
+                                Err(e) => {
+                                    return Err(e);
                                 }
                             }
                         }
-                        _ => {
-                            break;
-                        }
-                    },
-                    None => {
+                    }
+                    _ => {
                         break;
                     }
                 }
@@ -356,21 +332,19 @@ fn unary(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
                         }
                     } else {
                         // Unreachable
-                        return Err(ParserError {
+                        Err(ParserError {
                             err: "Unexpected end of input.".to_string(),
                             line: usize::max_value(),
-                        });
+                        })
                     }
                 }
                 _ => call(tokens),
             }
         }
-        None => {
-            return Err(ParserError {
-                err: "Unexpected end of input.".to_string(),
-                line: usize::max_value(),
-            });
-        }
+        None => Err(ParserError {
+            err: "Unexpected end of input.".to_string(),
+            line: usize::max_value(),
+        }),
     }
 }
 
@@ -399,7 +373,7 @@ fn call(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError> 
                             None => {
                                 return Err(ParserError {
                                     err: "Unexpected end of input in function call.".to_string(),
-                                    line: line,
+                                    line,
                                 });
                             }
                         }
@@ -456,7 +430,7 @@ fn value(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
                 match expression(tokens) {
                     Ok(body) => {
                         expect!(tokens, End, "Expected end.".to_string());
-                        return Ok(Ast::Function(params, Box::new(body)));
+                        Ok(Ast::Function(params, Box::new(body)))
                     }
                     Err(e) => Err(e),
                 }
@@ -527,17 +501,15 @@ fn value(tokens: &mut LinkedList<lexer::LexedToken>) -> Result<Ast, ParserError>
                 err.push_str(&token.token.to_string());
                 err.push('.');
                 Err(ParserError {
-                    err: err,
+                    err,
                     line: token.line,
                 })
             }
         },
-        None => {
-            return Err(ParserError {
-                err: "Unexpected end of input.".to_string(),
-                line: usize::max_value(),
-            });
-        }
+        None => Err(ParserError {
+            err: "Unexpected end of input.".to_string(),
+            line: usize::max_value(),
+        }),
     }
 }
 
